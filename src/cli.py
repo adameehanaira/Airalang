@@ -8,7 +8,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.2.0 (Next-Gen Engine)"
+VERSION = "1.3.0 (Pro Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m
@@ -27,7 +27,6 @@ ASCII_BANNER = f"""\033[1;36m
 """
 
 def is_balanced(code):
-    # Check if { }, ( ), [ ] are balanced
     in_single_quote = False
     in_double_quote = False
     in_comment = False

@@ -1,0 +1,11 @@
+# ===============================================
+# 🌟 Math Helper Library (Module Import Test)
+# ===============================================
+
+fn multiply(a, b) {
+    return a * b;
+}
+
+fn power_cube(x) {
+    return x * x * x;
+}

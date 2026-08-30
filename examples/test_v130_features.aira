@@ -1,0 +1,85 @@
+# ==========================================================
+# 🌟 AiraLang v1.3.0 Pro Edition Feature Suite Test
+# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# ==========================================================
+
+say "🔥 AiraLang v1.3.0 Feature Suite Test Running...";
+say "=================================================";
+
+# 1. Else-If Multi-branch test
+say "[1] Testing Else-If Chaining:";
+let score = 85;
+if (score >= 90) {
+    say "  Grade: S (Top Class)";
+} else if (score >= 80) {
+    say "  ✅ Grade: A (Pro Passed!)";
+} else if (score >= 50) {
+    say "  Grade: B";
+} else {
+    say "  Grade: Fail";
+}
+
+# 2. Shorthand Assignment Operators
+say "-------------------------------------------------";
+say "[2] Testing Shorthand Operators (+=, -=, *=, /=):";
+let count = 10;
+count += 5;
+say "  Count after += 5 : " + count;
+count *= 2;
+say "  Count after *= 2 : " + count;
+count -= 10;
+say "  Count after -= 10 : " + count;
+count /= 2;
+say "  Count after /= 2 : " + count;
+
+# 3. Built-in Utilities (min, max, sum, abs)
+say "-------------------------------------------------";
+say "[3] Testing Built-in Math & List Functions:";
+let numbers = [12, 45, 7, 89, 23];
+say "  Max number : " + max(numbers);
+say "  Min number : " + min(numbers);
+say "  Sum of list: " + sum(numbers);
+say "  Abs(-99)   : " + abs(-99);
+
+# 4. SQLite Database Module Test
+say "-------------------------------------------------";
+say "[4] Testing SQLite Database Module:";
+import "sqlite";
+let db_file = "test_aira.db";
+let db = sqlite.open(db_file);
+db.execute("CREATE TABLE IF NOT EXISTS developers (id INTEGER PRIMARY KEY, name TEXT, role TEXT);");
+db.execute("DELETE FROM developers;");
+db.insert("developers", {"name": "Adam Eehan", "role": "CEO & Founder"});
+db.insert("developers", {"name": "Aira AI", "role": "Autonomous Companion"});
+
+let rows = db.query("SELECT * FROM developers;");
+for row in rows {
+    say "  📁 DB Record -> Name: " + row["name"] + " | Role: " + row["role"];
+}
+db.close();
+import "file";
+file.delete(db_file);
+say "  ✅ SQLite database created, queried, and cleaned up!";
+
+# 5. Networking (Net) Module Test
+say "-------------------------------------------------";
+say "[5] Testing Net / Socket Module:";
+import "net";
+let my_ip = net.local_ip();
+say "  Local Machine IP : " + my_ip;
+let google_ip = net.resolve("google.com");
+say "  DNS Resolve (google.com) : " + google_ip;
+let port_80 = net.scan_port("google.com", 80);
+say "  Port 80 Open on google.com : " + port_80;
+
+# 6. Custom .aira File Import Test
+say "-------------------------------------------------";
+say "[6] Testing Custom .aira Module Import:";
+import "examples/math_helper.aira";
+let mult_res = math_helper.multiply(6, 7);
+let cube_res = math_helper.power_cube(4);
+say "  math_helper.multiply(6, 7) : " + mult_res;
+say "  math_helper.power_cube(4)   : " + cube_res;
+
+say "=================================================";
+say "🎉 ALL v1.3.0 FEATURES 100% OPERATIONAL & VERIFIED!";

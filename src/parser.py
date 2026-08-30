@@ -41,11 +41,11 @@ class Parser:
         if self.match("SEMICOLON"):
             return None
 
-        # standalone block statement: `{ stmt1; stmt2; }`
+        # Standalone block statement: `{ stmt1; stmt2; }`
         if tok.type == "LBRACE":
             return self.parse_block_or_statement()
 
-        # import / load / use statement: `import os;`, `import "math";`
+        # import / load / use statement: `import os;`, `import "math";`, `import "helper.aira";`
         if tok.type in ("IMPORT", "LOAD", "USE"):
             self.pos += 1
             if self.current().type in ("STRING", "IDENTIFIER"):
@@ -75,7 +75,7 @@ class Parser:
             self.match("SEMICOLON")
             return LetStatementNode(name_tok.value, expr, tok.line)
 
-        # if statement: `if (cond) { ... } else { ... }`
+        # if statement: `if (cond) { ... } else if (cond2) { ... } else { ... }`
         if tok.type == "IF":
             self.pos += 1
             has_paren = self.match("LPAREN")
@@ -85,7 +85,10 @@ class Parser:
             then_branch = self.parse_block_or_statement()
             else_branch = None
             if self.match("ELSE"):
-                else_branch = self.parse_block_or_statement()
+                if self.current().type == "IF":
+                    else_branch = self.parse_statement()
+                else:
+                    else_branch = self.parse_block_or_statement()
             return IfStatementNode(cond, then_branch, else_branch, tok.line)
 
         # while statement: `while (cond) { ... }`
@@ -98,7 +101,7 @@ class Parser:
             body = self.parse_block_or_statement()
             return WhileStatementNode(cond, body, tok.line)
 
-        # for statement: `for item in items { ... }` or `for (item in items) { ... }` or `for (let item in items) { ... }`
+        # for statement: `for item in items { ... }`
         if tok.type == "FOR":
             self.pos += 1
             has_paren = self.match("LPAREN")
@@ -166,7 +169,6 @@ class Parser:
             methods = {}
             while self.current().type != "RBRACE" and self.current().type != "EOF":
                 if self.match("FN") or self.current().type == "IDENTIFIER":
-                    # allow either `fn name()` or `name()`
                     if self.tokens[self.pos - 1].type != "FN":
                         m_name_tok = self.expect("IDENTIFIER")
                     else:
@@ -197,11 +199,23 @@ class Parser:
             self.match("SEMICOLON")
             return ReturnStatementNode(expr, tok.line)
 
-        # expression / assignment statement
+        # expression / assignment / shorthand assignment statement
         expr = self.parse_expression()
-        if self.match("ASSIGN"):
+        assign_op = self.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "MUL_ASSIGN", "DIV_ASSIGN", "MOD_ASSIGN")
+        if assign_op:
             val_expr = self.parse_expression()
             self.match("SEMICOLON")
+
+            if assign_op.type != "ASSIGN":
+                bin_op_symbol = {
+                    "PLUS_ASSIGN": "+",
+                    "MINUS_ASSIGN": "-",
+                    "MUL_ASSIGN": "*",
+                    "DIV_ASSIGN": "/",
+                    "MOD_ASSIGN": "%"
+                }[assign_op.type]
+                val_expr = BinaryOpNode(expr, bin_op_symbol, val_expr, assign_op.line)
+
             if isinstance(expr, IdentifierNode):
                 return AssignStatementNode(expr.name, val_expr, tok.line)
             elif isinstance(expr, IndexAccessNode):

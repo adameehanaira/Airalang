@@ -115,6 +115,10 @@ class Evaluator:
         self.global_env.set("num", lambda x: float(x) if '.' in str(x) else int(x))
         self.global_env.set("input", lambda prompt="": input(prompt))
         self.global_env.set("range", lambda start, stop=None, step=1: list(range(int(start), int(stop), int(step))) if stop is not None else list(range(int(start))))
+        self.global_env.set("min", lambda *args: min(args[0]) if len(args) == 1 and isinstance(args[0], (list, tuple)) else min(*args))
+        self.global_env.set("max", lambda *args: max(args[0]) if len(args) == 1 and isinstance(args[0], (list, tuple)) else max(*args))
+        self.global_env.set("abs", lambda x: abs(x))
+        self.global_env.set("sum", lambda lst: sum(lst) if isinstance(lst, (list, tuple)) else lst)
         self.global_env.set("append", lambda lst, item: lst.append(item) or lst)
         self.global_env.set("pop", lambda lst, idx=-1: lst.pop(idx))
         self.global_env.set("split", lambda s, sep=" ": str(s).split(sep))
@@ -147,8 +151,14 @@ class Evaluator:
                 module_instance = BUILTIN_MODULES[mod_name]()
                 env.set(mod_name, module_instance)
                 return module_instance
-            elif os.path.exists(mod_name):
-                with open(mod_name, "r", encoding="utf-8") as f:
+            
+            # File import check (.aira or .py)
+            target_path = mod_name
+            if not os.path.exists(target_path) and not target_path.endswith(".aira"):
+                target_path = mod_name + ".aira"
+
+            if os.path.exists(target_path):
+                with open(target_path, "r", encoding="utf-8") as f:
                     code = f.read()
                 from lexer import Lexer
                 from parser import Parser
@@ -156,7 +166,7 @@ class Evaluator:
                 sub_ast = Parser(sub_tokens).parse()
                 mod_env = Environment(parent=self.global_env)
                 self.eval_node(sub_ast, mod_env)
-                base_name = os.path.splitext(os.path.basename(mod_name))[0]
+                base_name = os.path.splitext(os.path.basename(target_path))[0]
                 aira_mod = AiraModule(base_name, mod_env.values)
                 env.set(base_name, aira_mod)
                 return aira_mod
@@ -419,7 +429,6 @@ class Evaluator:
             if isinstance(callee, AiraFunction):
                 return callee.call(self, args)
             elif isinstance(callee, AiraClass):
-                # allow calling class directly as constructor ClassName(args)
                 return callee.instantiate(self, args)
             elif callable(callee):
                 return callee(*args)
