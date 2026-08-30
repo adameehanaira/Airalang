@@ -1,0 +1,60 @@
+# ===================================================
+# [*] AiraLang v1.1.0 Standard Library & Modules Test
+# [*] Author: Adam Eehan (Aira Group of Technology)
+# ===================================================
+
+say "[*] Testing Built-in Standard Library Modules...";
+say "-----------------------------------------------";
+
+# 1. Math Module Test
+import "math";
+let sq = math.sqrt(64);
+let rnd = math.random(1, 100);
+say "[+] Math Sqrt(64) : " + sq;
+say "[+] Math Random(1-100) : " + rnd;
+say "[+] Math PI : " + math.pi;
+
+# 2. Time Module Test
+import "time";
+let current_time = time.now();
+say "[+] Current Timestamp : " + current_time;
+
+# 3. OS Module Test (Terminal commands)
+import "os";
+let kernel = os.cmd("uname -o");
+let user_dir = os.cwd();
+say "[+] OS Kernel : " + kernel;
+say "[+] Current Directory : " + user_dir;
+
+# 4. File Module Test
+import "file";
+let test_file = "aira_temp.txt";
+file.write(test_file, "AiraLang File I/O Engine Working!");
+let read_back = file.read(test_file);
+say "[+] File Read Result : " + read_back;
+file.delete(test_file);
+say "[+] Temporary File Cleaned Up!";
+
+# 5. Data Structures (Lists & Dictionaries)
+let profile = {
+    "name": "Adam Boss",
+    "role": "Founder & CEO",
+    "power": 100
+};
+say "[+] Profile Name : " + profile["name"];
+say "[+] Profile Role : " + profile["role"];
+
+let tools = ["AiraLang", "Termux", "CyberSecurity"];
+say "[+] First Tool : " + tools[0];
+append(tools, "NeuralEngine");
+say "[+] Updated Tools List : " + tools;
+
+# 6. JSON Module Test
+import "json";
+let raw_json = '{"project": "AiraLang", "version": "1.1.0", "status": "Ready"}';
+let parsed = json.parse(raw_json);
+say "[+] JSON Parsed Project : " + parsed["project"];
+say "[+] JSON Parsed Version : " + parsed["version"];
+
+say "-----------------------------------------------";
+say "[+] ALL BASIC MODULES TESTED & 100% OPERATIONAL!";

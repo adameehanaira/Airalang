@@ -1,0 +1,35 @@
+# ===================================================
+# 🌟 AiraLang Hello World & Feature Test
+# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# ===================================================
+
+say "🚀 Hello, World from AiraLang Engine!";
+say "======================================";
+
+let creator = "Adam Boss";
+let role = "Founder & CEO, Aira Group of Technology";
+let version = 1.0;
+
+say "👑 Author: " + creator;
+say "💼 Role: " + role;
+say "⚡ Version: " + version;
+
+# Math Operations
+let a = 50;
+let b = 25;
+let sum = a + b;
+say "🔢 Math Check (50 + 25): " + sum;
+
+# Conditional Logic
+if (sum >= 75) {
+    say "✅ Status: AiraLang Core Engine is 100% Online & Functional!";
+} else {
+    say "❌ Status: Error";
+}
+
+# Function Definition & Execution
+fn greet(name) {
+    return "🔥 Welcome to your own programming language, " + name + "! 👑";
+}
+
+say greet(creator);

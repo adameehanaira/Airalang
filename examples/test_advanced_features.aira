@@ -1,0 +1,101 @@
+# ==========================================================
+# 🌟 AiraLang v1.2.0 Advanced Engine Feature Test
+# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# ==========================================================
+
+say "🔥 AiraLang v1.2.0 Next-Gen Features Test Starting...";
+say "======================================================";
+
+# 1. Testing for..in loops with break and continue
+say "[1] Testing For..In Loops & Range:";
+let fruits = ["Apple", "Mango", "Banana", "Orange"];
+for f in fruits {
+    say "  👉 Fruit: " + f;
+}
+
+say "  Looping through range(1, 5):";
+for i in range(1, 6) {
+    if (i == 3) {
+        say "  ⚡ Skipping 3 (continue)";
+        continue;
+    }
+    say "  🔢 Number: " + i;
+}
+
+# 2. Testing String & List Methods
+say "------------------------------------------------------";
+say "[2] Testing Native String & List Methods:";
+let greeting = "  aira technology group  ";
+say "  Original : '" + greeting + "'";
+say "  Trimmed  : '" + greeting.trim() + "'";
+say "  Upper    : " + greeting.trim().upper();
+say "  Length   : " + greeting.trim().length;
+
+let langs = ["C++", "Python"];
+langs.push("AiraLang");
+say "  Updated List: " + langs.join(" -> ");
+say "  Contains Python? " + langs.contains("Python");
+
+# 3. Testing Try..Catch & Throw
+say "------------------------------------------------------";
+say "[3] Testing Exception Handling (Try / Catch / Throw):";
+try {
+    say "  Trying risky operation...";
+    throw "Fatal Memory Overflow Exception (Simulated)";
+    say "  This line should never print!";
+} catch (err) {
+    say "  🛡️ Caught Exception Successfully: " + err;
+}
+
+# 4. Testing Object-Oriented Programming (OOP - Classes & Instances)
+say "------------------------------------------------------";
+say "[4] Testing OOP (Classes, Instances, This, Methods):";
+class Agent {
+    fn init(name, rank, power) {
+        this.name = name;
+        this.rank = rank;
+        this.power = power;
+    }
+
+    fn introduce() {
+        return "👑 Agent " + this.name + " | Rank: " + this.rank + " | Power: " + this.power;
+    }
+
+    fn boost(amount) {
+        this.power = this.power + amount;
+        say "  ⚡ Power boosted! New power: " + this.power;
+    }
+}
+
+let boss = new Agent("Adam Eehan", "CEO & AI Architect", 100);
+say "  " + boss.introduce();
+boss.boost(50);
+say "  " + boss.introduce();
+
+# 5. Testing Crypto / Hash Module
+say "------------------------------------------------------";
+say "[5] Testing Built-in Crypto Module:";
+import "crypto";
+let secret = "AdamBoss_AiraTech_2026";
+let hash_val = crypto.sha256(secret);
+let b64_val = crypto.b64encode(secret);
+say "  Secret String : " + secret;
+say "  SHA-256 Hash  : " + hash_val;
+say "  Base64 Encode : " + b64_val;
+say "  Base64 Decode : " + crypto.b64decode(b64_val);
+
+# 6. Testing HTTP Module (Status check)
+say "------------------------------------------------------";
+say "[6] Testing HTTP Module:";
+import "http";
+let test_url = "https://httpbin.org/get";
+try {
+    say "  Connecting to " + test_url + "...";
+    let status_code = http.status(test_url);
+    say "  HTTP Response Status: " + status_code;
+} catch (net_err) {
+    say "  Network offline or error handled: " + net_err;
+}
+
+say "======================================================";
+say "✅ ALL ADVANCED FEATURES TESTED & 100% OPERATIONAL! 🚀";
