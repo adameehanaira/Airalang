@@ -168,3 +168,11 @@ class DictNode(ASTNode):
     def __init__(self, pairs, line):
         self.pairs = pairs
         self.line = line
+
+class FunctionExprNode(ASTNode):
+    def __init__(self, name, params, body, line):
+        self.name = name
+        self.params = params
+        self.body = body
+        self.line = line
+

@@ -47,6 +47,9 @@ class AiraFunction:
         self.def_node = def_node
         self.closure_env = closure_env
 
+    def __call__(self, *args):
+        return self.call(Evaluator._current_evaluator, list(args))
+
     def call(self, evaluator, args, this_instance=None):
         fn_env = Environment(parent=self.closure_env)
         if this_instance is not None:
@@ -129,6 +132,10 @@ class Evaluator:
         self.global_env.set("bin", lambda x: bin(int(x)))
         self.global_env.set("ord", lambda c: ord(str(c)[0]))
         self.global_env.set("chr", lambda x: chr(int(x)))
+        self.global_env.set("sorted", lambda lst, reverse=False: sorted(lst, reverse=bool(reverse)))
+        self.global_env.set("reversed", lambda lst: list(reversed(lst)))
+        self.global_env.set("enumerate", lambda lst: [[i, v] for i, v in enumerate(lst)])
+        self.global_env.set("zip", lambda *lsts: [list(items) for items in zip(*lsts)])
 
     def eval(self, ast):
         return self.eval_node(ast, self.global_env)
@@ -309,6 +316,12 @@ class Evaluator:
             env.set(node.name, fn)
             return fn
 
+        elif nodetype == "FunctionExprNode":
+            fn = AiraFunction(node, env)
+            if node.name:
+                env.set(node.name, fn)
+            return fn
+
         elif nodetype == "ReturnStatementNode":
             val = self.eval_node(node.expression, env) if node.expression else None
             raise ReturnException(val)
@@ -351,6 +364,8 @@ class Evaluator:
                     return target[member]
                 if member == "keys": return lambda: list(target.keys())
                 if member == "values": return lambda: list(target.values())
+                if member == "items": return lambda: [[k, v] for k, v in target.items()]
+                if member == "get": return lambda k, default=None: target.get(k, default)
                 if member == "has" or member == "contains": return lambda k: k in target
                 if member == "length": return len(target)
 
@@ -359,6 +374,7 @@ class Evaluator:
                 if member == "length": return len(target)
                 if member == "upper": return lambda: target.upper()
                 if member == "lower": return lambda: target.lower()
+                if member == "title": return lambda: target.title()
                 if member == "split": return lambda sep=" ": target.split(sep)
                 if member == "trim" or member == "strip": return lambda: target.strip()
                 if member == "replace": return lambda old, new: target.replace(str(old), str(new))
@@ -366,6 +382,8 @@ class Evaluator:
                 if member == "starts_with" or member == "startswith": return lambda sub: target.startswith(str(sub))
                 if member == "ends_with" or member == "endswith": return lambda sub: target.endswith(str(sub))
                 if member == "slice": return lambda start, end=None: target[int(start):int(end) if end is not None else None]
+                if member == "reverse": return lambda: target[::-1]
+                if member == "count": return lambda sub: target.count(str(sub))
 
             # List methods & properties
             elif isinstance(target, list):
@@ -374,9 +392,62 @@ class Evaluator:
                 if member == "pop": return lambda idx=-1: target.pop(idx)
                 if member == "join": return lambda sep=" ": sep.join(str(x) for x in target)
                 if member == "contains": return lambda x: x in target
-                if member == "reverse": return lambda: target.reverse() or target
-                if member == "sort": return lambda: target.sort() or target
+                if member == "reverse": return lambda: list(reversed(target))
+                if member == "sort": return lambda reverse=False: sorted(target, reverse=bool(reverse))
                 if member == "slice": return lambda start, end=None: target[int(start):int(end) if end is not None else None]
+                if member == "count": return lambda x: target.count(x)
+                if member == "indexOf" or member == "find_index": return lambda x: target.index(x) if x in target else -1
+                if member == "map":
+                    def _map(fn):
+                        res = []
+                        for x in target:
+                            val = fn.call(self, [x]) if isinstance(fn, AiraFunction) else fn(x)
+                            res.append(val)
+                        return res
+                    return _map
+                if member == "filter":
+                    def _filter(fn):
+                        res = []
+                        for x in target:
+                            val = fn.call(self, [x]) if isinstance(fn, AiraFunction) else fn(x)
+                            if val:
+                                res.append(x)
+                        return res
+                    return _filter
+                if member == "find":
+                    def _find(fn):
+                        for x in target:
+                            val = fn.call(self, [x]) if isinstance(fn, AiraFunction) else fn(x)
+                            if val:
+                                return x
+                        return None
+                    return _find
+                if member == "each" or member == "forEach":
+                    def _each(fn):
+                        for x in target:
+                            if isinstance(fn, AiraFunction):
+                                fn.call(self, [x])
+                            else:
+                                fn(x)
+                        return target
+                    return _each
+                if member == "reduce":
+                    def _reduce(fn, initial=None):
+                        items = list(target)
+                        if initial is None:
+                            if not items:
+                                raise ValueError("reduce on empty list with no initial value")
+                            accum = items[0]
+                            items = items[1:]
+                        else:
+                            accum = initial
+                        for x in items:
+                            if isinstance(fn, AiraFunction):
+                                accum = fn.call(self, [accum, x])
+                            else:
+                                accum = fn(accum, x)
+                        return accum
+                    return _reduce
 
             elif hasattr(target, member):
                 return getattr(target, member)

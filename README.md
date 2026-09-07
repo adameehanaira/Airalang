@@ -1,18 +1,17 @@
-# 🌟 AiraLang (v1.3.0 Pro Edition)
-> **The High-Performance, Expressive & Modular Scripting Language for Creators & Developers**  
+# 🌟 AiraLang (v1.4.0 Aira Cyber & AI Edition)
+> **The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers**  
 > **Author & Creator:** Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
 
 ---
 
 ## ⚡ Introduction
-`AiraLang` is an open-source, dynamic, and expressive scripting language engineered from scratch with a focus on simplicity, developer freedom, high speed, and native systems/cybersecurity capabilities.
+`AiraLang` is an open-source, dynamic, and expressive scripting language engineered from scratch with a focus on simplicity, developer freedom, high speed, native AI integrations, and advanced systems/cybersecurity capabilities.
 
 ---
 
 ## 🚀 Quick Start in Termux / Linux
 
 ### 1. Interactive REPL Shell
-Launch the live interactive REPL anytime by typing:
 ```bash
 airalang
 ```
@@ -20,6 +19,19 @@ airalang
 ### 2. Run an AiraLang Script
 ```bash
 airalang script.aira
+# or: airalang run script.aira
+```
+
+### 3. Compile Script to Standalone Executable Binary
+```bash
+airalang build script.aira -o my_tool
+./my_tool
+```
+
+### 4. Create New Project Scaffold
+```bash
+airalang new my_cyber_project
+cd my_cyber_project && airalang main.aira
 ```
 
 ---
@@ -128,9 +140,86 @@ say "Sum: " + sum(numbers);
 say "Abs: " + abs(-42);
 ```
 
+### 10. Functional Programming & Anonymous Functions
+First-class functions can be created anonymously (`fn(...) { ... }`) and passed into higher-order methods:
+```aira
+let nums = [1, 2, 3, 4, 5, 6];
+
+# Filter even numbers
+let evens = nums.filter(fn(x) { return x % 2 == 0; }); # [2, 4, 6]
+
+# Map over items
+let doubled = evens.map(fn(x) { return x * 2; }); # [4, 8, 12]
+
+# Find specific item
+let target = nums.find(fn(x) { return x > 4; }); # 5
+
+# Reduce list to a single value
+let sum = nums.reduce(fn(acc, val) { return acc + val; }, 0); # 21
+```
+
 ---
 
 ## 📦 Standard Library Modules
+
+### 🤖 Native AI Integration Engine (`ai`)
+Directly integrate Generative AI (Google Gemini & Groq LLMs) natively in AiraLang:
+```aira
+import "ai";
+
+# 1-line query to AI models
+let answer = ai.ask("Explain cyber security defensive postures");
+say answer;
+
+# Set custom API keys or switch providers
+ai.set_key("YOUR_GEMINI_KEY", "gemini");
+ai.set_key("YOUR_GROQ_KEY", "groq");
+
+# Summarize long text
+let summary = ai.summarize("Long report text here...", 50);
+say summary;
+```
+
+### 🛡️ Cyber Security & Reconnaissance Engine (`sec`)
+Engineered natively for ethical hackers, security researchers, and cyber defense:
+```aira
+import "sec";
+
+# Multi-Threaded Port Scanner
+let open_ports = sec.scan_ports("google.com", [80, 443, 8080], 10);
+say "Open Ports: ", open_ports;
+
+# HTTP Security Header Audit (checks CSP, HSTS, X-Frame-Options)
+let audit = sec.audit_headers("https://example.com");
+say "Security Grade: " + audit["grade"];
+say "Missing Headers: ", audit["missing"];
+
+# Subdomain Enumeration via Certificate Transparency
+let subdomains = sec.subdomains("example.com");
+say "Discovered Subdomains: ", subdomains;
+
+# Hash Identification & Cracking
+say "Hash Type: " + sec.hash_identify("098f6bcd4621d373cade4e832627b4f6");
+let plain = sec.crack_md5("098f6bcd4621d373cade4e832627b4f6", ["admin", "test", "root"]);
+say "Cracked Plaintext: " + plain;
+```
+
+### 🧵 Multi-Threading & Concurrency (`thread`)
+Run parallel workloads, concurrent network sweeps, or background jobs:
+```aira
+import "thread";
+
+# Background thread execution
+thread.spawn(fn() {
+    say "Worker running concurrently in background!";
+});
+
+# High-speed parallel pool map
+let results = thread.pool(fn(x) {
+    return x * 10;
+}, [1, 2, 3, 4, 5], 4);
+say "Parallel results: ", results; # [10, 20, 30, 40, 50]
+```
 
 ### 🗄️ SQLite Database Module (`sqlite`)
 ```aira

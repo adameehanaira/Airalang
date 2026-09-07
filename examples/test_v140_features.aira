@@ -1,0 +1,106 @@
+# ================================================================
+# 🌟 AiraLang v1.4.0 (Aira Cyber & AI Edition) Showcase
+# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# ================================================================
+
+say "==================================================";
+say "🚀 Testing AiraLang v1.4.0 Next-Gen Features!";
+say "==================================================";
+
+# 1. First-Class Anonymous Functions & Functional Array Methods
+say "";
+say "--- [1] Functional Array Processing ---";
+let numbers = [10, 15, 20, 25, 30, 35, 40];
+say "Original array: ", numbers;
+
+# .filter() with anonymous function
+let multiples_of_20 = numbers.filter(fn(n) {
+    return n % 20 == 0;
+});
+say "Multiples of 20 (filter): ", multiples_of_20;
+
+# .map() with anonymous function
+let doubled = multiples_of_20.map(fn(x) {
+    return x * 2;
+});
+say "Doubled (map): ", doubled;
+
+# .find()
+let first_big = numbers.find(fn(n) {
+    return n > 25;
+});
+say "First item > 25 (find): ", first_big;
+
+# .reduce()
+let total_sum = numbers.reduce(fn(accum, val) {
+    return accum + val;
+}, 0);
+say "Total sum (reduce): ", total_sum;
+
+# 2. String & Dict enhancements
+say "";
+say "--- [2] String & Dictionary Enhancements ---";
+let phrase = "aira cyber guard";
+say "Original: ", phrase;
+say "Title Case: ", phrase.title();
+say "Reversed: ", phrase.reverse();
+
+let config = {
+    "target": "example.com",
+    "threads": 10,
+    "mode": "stealth"
+};
+say "Config items: ", config.items();
+say "Config get (target): ", config.get("target");
+say "Config get (missing): ", config.get("timeout", 5000);
+
+# 3. Concurrency & Multi-Threading Module
+say "";
+say "--- [3] Concurrency & Multi-Threading ---";
+import "thread";
+
+thread.spawn(fn() {
+    say "  [Thread] Background worker started!";
+    thread.sleep(0.1);
+    say "  [Thread] Background worker finished!";
+});
+
+# Parallel pool mapping
+let squares = thread.pool(fn(x) {
+    return x * x;
+}, [1, 2, 3, 4, 5], 4);
+say "Parallel thread.pool squares: ", squares;
+
+# 4. Cyber Security & Recon Engine
+say "";
+say "--- [4] Cyber Security & Recon Engine ---";
+import "sec";
+
+# Hash Identification
+let md5_sample = "098f6bcd4621d373cade4e832627b4f6"; # 'test' in MD5
+let sha_sample = "a94a8fe5ccb19ba61c4c0873d391e987982fbbd3"; # 'test' in SHA-1
+say "Identified 32-hex: ", sec.hash_identify(md5_sample);
+say "Identified 40-hex: ", sec.hash_identify(sha_sample);
+
+# MD5 Cracker
+let cracked = sec.crack_md5(md5_sample, ["admin", "root", "test", "123456"]);
+say "Cracked MD5 ('098f...'): ", cracked;
+
+# DNS Resolution
+say "Resolved google.com: ", sec.resolve("google.com");
+
+# Port Scanner
+say "Google.com Port 443 (HTTPS) Open: ", sec.scan_port("google.com", 443, 2.0);
+
+# 5. AI Module
+say "";
+say "--- [5] AI Integration Engine ---";
+import "ai";
+let ai_response = ai.ask("AiraLang v1.4.0 launched!");
+say "AI Assistant: ", ai_response;
+
+say "";
+say "==================================================";
+say "🎉 All AiraLang v1.4.0 tests executed successfully!";
+say "👑 Developed for Adam Eehan - Aira Group of Technology";
+say "==================================================";

@@ -10,6 +10,8 @@ import socket
 import sqlite3
 import urllib.request
 import urllib.parse
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 class AiraModule:
     def __init__(self, name, methods=None):
@@ -227,6 +229,7 @@ def create_time_module():
 def create_json_module():
     return AiraModule("json", {
         "parse": lambda s: json.loads(s),
+        "mkstring": lambda obj, indent=2: json.dumps(obj, indent=indent),
         "stringify": lambda obj, indent=2: json.dumps(obj, indent=indent)
     })
 
@@ -323,6 +326,316 @@ def create_string_module():
         "join": lambda lst, sep=" ": sep.join(str(x) for x in lst)
     })
 
+def create_ai_module():
+    state = {
+        "gemini_key": os.environ.get("GEMINI_API_KEY", ""),
+        "groq_key": os.environ.get("GROQ_API_KEY", "")
+    }
+
+    def set_key(key, provider="gemini"):
+        if str(provider).lower() == "groq":
+            state["groq_key"] = str(key)
+        else:
+            state["gemini_key"] = str(key)
+        return True
+
+    def get_key(provider="gemini"):
+        return state["groq_key"] if str(provider).lower() == "groq" else state["gemini_key"]
+
+    def ask(prompt, model="gemini-2.5-flash", key=None):
+        api_key = key or state["gemini_key"]
+        if not api_key:
+            if state["groq_key"]:
+                return groq(prompt, key=state["groq_key"])
+            return f"[Aira AI Engine] Notice: No API Key configured. Call `ai.set_key('YOUR_API_KEY')` or set `GEMINI_API_KEY` in environment. Received prompt: '{prompt}'"
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+        payload = json.dumps({"contents": [{"parts": [{"text": str(prompt)}]}]}).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            return f"[Aira AI Error]: {e}"
+
+    def groq(prompt, model="llama-3.3-70b-versatile", key=None):
+        api_key = key or state["groq_key"]
+        if not api_key:
+            return f"[Aira Groq Error]: No GROQ API key provided. Set GROQ_API_KEY or call ai.set_key('key', 'groq')."
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        payload = json.dumps({
+            "model": model,
+            "messages": [{"role": "user", "content": str(prompt)}]
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        })
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"[Aira Groq Error]: {e}"
+
+    def chat(messages, model="gemini-2.5-flash", key=None):
+        api_key = key or state["gemini_key"]
+        if not api_key and state["groq_key"]:
+            url = "https://api.groq.com/openai/v1/chat/completions"
+            payload = json.dumps({"model": "llama-3.3-70b-versatile", "messages": messages}).encode("utf-8")
+            req = urllib.request.Request(url, data=payload, headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {state['groq_key']}"
+            })
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))["choices"][0]["message"]["content"]
+        last_msg = messages[-1]["content"] if isinstance(messages, list) and messages else str(messages)
+        return ask(last_msg, model=model, key=api_key)
+
+    def summarize(text, max_words=100):
+        prompt = f"Summarize the following text concisely in under {max_words} words:\n\n{text}"
+        return ask(prompt)
+
+    return AiraModule("ai", {
+        "ask": ask,
+        "chat": chat,
+        "groq": groq,
+        "summarize": summarize,
+        "set_key": set_key,
+        "get_key": get_key,
+    })
+
+def create_sec_module():
+    COMMON_SERVICES = {
+        21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS",
+        80: "HTTP", 110: "POP3", 111: "RPCBind", 135: "RPC", 139: "NetBIOS",
+        143: "IMAP", 443: "HTTPS", 445: "SMB", 993: "IMAPS", 995: "POP3S",
+        1433: "MSSQL", 1521: "Oracle", 3306: "MySQL", 3389: "RDP",
+        5432: "PostgreSQL", 5900: "VNC", 6379: "Redis", 8000: "HTTP-Alt",
+        8080: "HTTP-Proxy", 8443: "HTTPS-Alt", 8888: "HTTP-Alt", 9000: "SonarQube",
+        27017: "MongoDB"
+    }
+
+    def scan_port(host, port, timeout=1.0):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(float(timeout))
+            res = s.connect_ex((str(host), int(port)))
+            s.close()
+            return res == 0
+        except Exception:
+            return False
+
+    def scan_ports(host, ports=None, threads=15, timeout=1.0):
+        if ports is None:
+            ports = [21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 1433, 1521, 3306, 3389, 5432, 6379, 8000, 8080, 8443, 8888]
+        elif isinstance(ports, range):
+            ports = list(ports)
+        elif not isinstance(ports, list):
+            ports = [int(ports)]
+
+        open_ports = []
+        def _check(p):
+            if scan_port(host, p, timeout=timeout):
+                svc = COMMON_SERVICES.get(p, "Unknown")
+                return {"port": p, "service": svc, "state": "open"}
+            return None
+
+        with ThreadPoolExecutor(max_workers=int(threads)) as executor:
+            results = executor.map(_check, ports)
+            for r in results:
+                if r is not None:
+                    open_ports.append(r)
+        return open_ports
+
+    def banner(host, port, timeout=2.0):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(float(timeout))
+            s.connect((str(host), int(port)))
+            if int(port) in (80, 8080, 8000, 8888):
+                s.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
+            else:
+                s.sendall(b"\r\n")
+            data = s.recv(1024).decode('utf-8', errors='ignore').strip()
+            s.close()
+            return data
+        except Exception as e:
+            return f"Error: {e}"
+
+    def audit_headers(url):
+        if not str(url).startswith("http://") and not str(url).startswith("https://"):
+            url = "https://" + str(url)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "AiraLang-SecEngine/1.4.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                headers = dict(resp.headers)
+
+            important_headers = [
+                "Strict-Transport-Security",
+                "Content-Security-Policy",
+                "X-Frame-Options",
+                "X-Content-Type-Options",
+                "Referrer-Policy",
+                "Permissions-Policy"
+            ]
+
+            present = []
+            missing = []
+            header_keys_lower = {k.lower(): k for k in headers.keys()}
+
+            for h in important_headers:
+                if h.lower() in header_keys_lower:
+                    present.append(h)
+                else:
+                    missing.append(h)
+
+            score_ratio = len(present) / len(important_headers)
+            if score_ratio >= 0.8: grade = "A"
+            elif score_ratio >= 0.6: grade = "B"
+            elif score_ratio >= 0.4: grade = "C"
+            elif score_ratio >= 0.2: grade = "D"
+            else: grade = "F"
+
+            return {
+                "url": url,
+                "grade": grade,
+                "present": present,
+                "missing": missing,
+                "server": headers.get("Server", headers.get("server", "Hidden/Unknown")),
+                "headers": headers
+            }
+        except Exception as e:
+            return {"url": url, "error": str(e)}
+
+    def subdomains(domain, timeout=8.0):
+        try:
+            clean_dom = str(domain).replace("https://", "").replace("http://", "").split("/")[0]
+            url = f"https://crt.sh/?q=%.{urllib.parse.quote(clean_dom)}&output=json"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=float(timeout)) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+            subs = set()
+            for entry in data:
+                name_val = entry.get("name_value", "")
+                for sub in name_val.split("\n"):
+                    sub = sub.strip().lower()
+                    if sub and "*" not in sub:
+                        subs.add(sub)
+            return sorted(list(subs))
+        except Exception as e:
+            return [f"Error fetching subdomains: {e}"]
+
+    def hash_identify(hash_str):
+        h = str(hash_str).strip()
+        l = len(h)
+        is_hex = all(c in "0123456789abcdefABCDEF" for c in h)
+
+        if h.startswith("$2a$") or h.startswith("$2b$") or h.startswith("$2y$"):
+            return "Bcrypt"
+        if h.startswith("$6$"):
+            return "SHA-512 Crypt"
+        if h.startswith("$1$"):
+            return "MD5 Crypt"
+
+        if is_hex:
+            if l == 32: return "MD5 / NTLM"
+            elif l == 40: return "SHA-1"
+            elif l == 56: return "SHA-224"
+            elif l == 64: return "SHA-256"
+            elif l == 96: return "SHA-384"
+            elif l == 128: return "SHA-512"
+
+        return "Unknown Hash Format"
+
+    def crack_md5(target_hash, wordlist):
+        target = str(target_hash).lower().strip()
+        words = []
+        if isinstance(wordlist, list):
+            words = wordlist
+        elif isinstance(wordlist, str):
+            if os.path.exists(wordlist):
+                with open(wordlist, "r", encoding="utf-8", errors="ignore") as f:
+                    words = [line.strip() for line in f]
+            else:
+                words = [wordlist]
+
+        for w in words:
+            if hashlib.md5(w.encode('utf-8')).hexdigest() == target:
+                return w
+        return None
+
+    def resolve(host):
+        try:
+            return socket.gethostbyname(str(host))
+        except Exception as e:
+            return str(e)
+
+    def reverse_dns(ip):
+        try:
+            return socket.gethostbyaddr(str(ip))[0]
+        except Exception as e:
+            return str(e)
+
+    return AiraModule("sec", {
+        "scan_port": scan_port,
+        "scan_ports": scan_ports,
+        "scan": scan_ports,
+        "banner": banner,
+        "audit_headers": audit_headers,
+        "subdomains": subdomains,
+        "hash_identify": hash_identify,
+        "crack_md5": crack_md5,
+        "resolve": resolve,
+        "reverse_dns": reverse_dns
+    })
+
+def create_thread_module():
+    def spawn(fn, args=None):
+        if args is None:
+            args = []
+        elif not isinstance(args, (list, tuple)):
+            args = [args]
+
+        def _runner():
+            if callable(fn):
+                fn(*args)
+
+        t = threading.Thread(target=_runner, daemon=True)
+        t.start()
+        return t
+
+    def join(t, timeout=None):
+        if hasattr(t, "join"):
+            t.join(timeout=float(timeout) if timeout is not None else None)
+            return True
+        return False
+
+    def sleep(seconds):
+        time.sleep(float(seconds))
+        return True
+
+    def pool(fn, items, max_workers=5):
+        if not isinstance(items, (list, tuple)):
+            items = list(items)
+
+        def _worker(item):
+            if callable(fn):
+                return fn(item)
+            return None
+
+        with ThreadPoolExecutor(max_workers=int(max_workers)) as executor:
+            return list(executor.map(_worker, items))
+
+    return AiraModule("thread", {
+        "spawn": spawn,
+        "start": spawn,
+        "join": join,
+        "sleep": sleep,
+        "pool": pool
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -333,5 +646,9 @@ BUILTIN_MODULES = {
     "crypto": create_crypto_module,
     "string": create_string_module,
     "sqlite": create_sqlite_module,
-    "net": create_net_module
+    "net": create_net_module,
+    "ai": create_ai_module,
+    "sec": create_sec_module,
+    "thread": create_thread_module
 }
+

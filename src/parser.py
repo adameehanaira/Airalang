@@ -382,5 +382,18 @@ class Parser:
                     pairs.append((k, v))
             self.expect("RBRACE")
             return DictNode(pairs, tok.line)
+        if self.match("FN"):
+            fn_name = None
+            if self.current().type == "IDENTIFIER":
+                fn_name = self.expect("IDENTIFIER").value
+            self.expect("LPAREN")
+            params = []
+            if self.current().type != "RPAREN":
+                params.append(self.expect("IDENTIFIER").value)
+                while self.match("COMMA"):
+                    params.append(self.expect("IDENTIFIER").value)
+            self.expect("RPAREN")
+            body = self.parse_block_or_statement()
+            return FunctionExprNode(fn_name, params, body, tok.line)
 
         raise SyntaxError(f"AiraLang SyntaxError: Unexpected token '{tok.type}' ({repr(tok.value)}) at line {tok.line}, col {tok.col}")
