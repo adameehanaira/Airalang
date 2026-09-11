@@ -1,7 +1,7 @@
 import re
 
 TOKEN_TYPES = [
-    ("COMMENT",        r"#.*"),
+    ("COMMENT",        r"(#|//).*"),
     ("WHITESPACE",     r"[ \t\r\n]+"),
     ("NUMBER",         r"\d+(\.\d+)?"),
     ("STRING",         r'("([^"\\]|\\.)*"|\'([^\'\\]|\\.)*\')'),

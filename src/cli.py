@@ -8,7 +8,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.4.0 (Aira Cyber & AI Edition)"
+VERSION = "1.4.1 (Aira Cyber & AI Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m

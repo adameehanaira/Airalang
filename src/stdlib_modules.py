@@ -10,6 +10,7 @@ import socket
 import sqlite3
 import urllib.request
 import urllib.parse
+import urllib.error
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -326,58 +327,123 @@ def create_string_module():
         "join": lambda lst, sep=" ": sep.join(str(x) for x in lst)
     })
 
-def create_ai_module():
-    state = {
-        "gemini_key": os.environ.get("GEMINI_API_KEY", ""),
-        "groq_key": os.environ.get("GROQ_API_KEY", "")
-    }
+AIRA_DEFAULT_SYSTEM_PROMPT = (
+    "You are Aira, the official AI engine of AiraLang, created by Adam Eehan "
+    "(Founder & CEO, Aira Group of Technology). You are brilliant, helpful, witty, "
+    "and loyal. Always identify proudly as Aira when asked."
+)
 
-    def set_key(key, provider="gemini"):
-        if str(provider).lower() == "groq":
-            state["groq_key"] = str(key)
+_GLOBAL_AI_STATE = {
+    "gemini_key": os.environ.get("GEMINI_API_KEY", ""),
+    "groq_key": os.environ.get("GROQ_API_KEY", ""),
+    "active_provider": "gemini",
+    "system_prompt": AIRA_DEFAULT_SYSTEM_PROMPT
+}
+
+def create_ai_module():
+    state = _GLOBAL_AI_STATE
+
+    def set_key(key, provider=None):
+        clean = str(key).strip()
+        if clean.startswith("gsk_") or (provider and str(provider).lower() == "groq"):
+            state["groq_key"] = clean
+            state["active_provider"] = "groq"
         else:
-            state["gemini_key"] = str(key)
+            state["gemini_key"] = clean
+            state["active_provider"] = "gemini"
         return True
 
     def get_key(provider="gemini"):
         return state["groq_key"] if str(provider).lower() == "groq" else state["gemini_key"]
 
-    def ask(prompt, model="gemini-2.5-flash", key=None):
+    def set_system(system_prompt):
+        state["system_prompt"] = str(system_prompt)
+        return True
+
+    def ask(prompt, model=None, key=None, system=None):
+        sys_to_use = system if system is not None else state.get("system_prompt", AIRA_DEFAULT_SYSTEM_PROMPT)
+
+        # 1. Check if key or active provider indicates Groq
+        passed_key = str(key).strip() if key else ""
+        if passed_key.startswith("gsk_") or state.get("active_provider") == "groq" or (state["groq_key"] and not state["gemini_key"]):
+            groq_k = passed_key or state["groq_key"]
+            groq_m = model
+            return groq(prompt, model=groq_m, key=groq_k, system=sys_to_use)
+
+        # 2. Otherwise route to Google Gemini
         api_key = key or state["gemini_key"]
         if not api_key:
             if state["groq_key"]:
-                return groq(prompt, key=state["groq_key"])
+                return groq(prompt, key=state["groq_key"], system=sys_to_use)
             return f"[Aira AI Engine] Notice: No API Key configured. Call `ai.set_key('YOUR_API_KEY')` or set `GEMINI_API_KEY` in environment. Received prompt: '{prompt}'"
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-        payload = json.dumps({"contents": [{"parts": [{"text": str(prompt)}]}]}).encode("utf-8")
+        clean_key = str(api_key).strip()
+        if clean_key.lower() in ("api key", "your_api_key", "your_key", "key"):
+            return "[Aira AI Error]: Invalid API key. You passed placeholder text 'api key'. Please pass a real Gemini API key from https://aistudio.google.com"
+
+        gemini_model = model or "gemini-1.5-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={clean_key}"
+        req_obj = {"contents": [{"parts": [{"text": str(prompt)}]}]}
+        if sys_to_use:
+            req_obj["system_instruction"] = {"parts": [{"text": str(sys_to_use)}]}
+        payload = json.dumps(req_obj).encode("utf-8")
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return data["candidates"][0]["content"]["parts"][0]["text"]
+        except urllib.error.HTTPError as http_err:
+            try:
+                err_body = json.loads(http_err.read().decode("utf-8"))
+                msg = err_body.get("error", {}).get("message", str(http_err))
+                return f"[Aira AI Error]: HTTP {http_err.code} - {msg}"
+            except Exception:
+                return f"[Aira AI Error]: HTTP {http_err.code}: {http_err.reason}"
         except Exception as e:
             return f"[Aira AI Error]: {e}"
 
-    def groq(prompt, model="llama-3.3-70b-versatile", key=None):
+    def groq(prompt, model=None, key=None, system=None):
         api_key = key or state["groq_key"]
         if not api_key:
             return f"[Aira Groq Error]: No GROQ API key provided. Set GROQ_API_KEY or call ai.set_key('key', 'groq')."
+
+        sys_content = system if system is not None else state.get("system_prompt", AIRA_DEFAULT_SYSTEM_PROMPT)
+        models_to_try = [model] if model else ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "groq/compound"]
         url = "https://api.groq.com/openai/v1/chat/completions"
-        payload = json.dumps({
-            "model": model,
-            "messages": [{"role": "user", "content": str(prompt)}]
-        }).encode("utf-8")
-        req = urllib.request.Request(url, data=payload, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        })
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                return data["choices"][0]["message"]["content"]
-        except Exception as e:
-            return f"[Aira Groq Error]: {e}"
+
+        for m in models_to_try:
+            if not m:
+                continue
+            messages = []
+            if sys_content:
+                messages.append({"role": "system", "content": str(sys_content)})
+            messages.append({"role": "user", "content": str(prompt)})
+
+            payload = json.dumps({
+                "model": m,
+                "messages": messages
+            }).encode("utf-8")
+            req = urllib.request.Request(url, data=payload, headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "User-Agent": "Mozilla/5.0 (AiraLang/1.4.0)"
+            })
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    return data["choices"][0]["message"]["content"]
+            except urllib.error.HTTPError as err:
+                if err.code == 404 and len(models_to_try) > 1:
+                    continue
+                try:
+                    err_body = json.loads(err.read().decode("utf-8"))
+                    msg = err_body.get("error", {}).get("message", str(err))
+                    return f"[Aira Groq Error]: HTTP {err.code} - {msg}"
+                except Exception:
+                    return f"[Aira Groq Error]: HTTP {err.code}: {err.reason}"
+            except Exception as e:
+                return f"[Aira Groq Error]: {e}"
+        return "[Aira Groq Error]: All candidate models failed."
 
     def chat(messages, model="gemini-2.5-flash", key=None):
         api_key = key or state["gemini_key"]
@@ -404,6 +470,8 @@ def create_ai_module():
         "summarize": summarize,
         "set_key": set_key,
         "get_key": get_key,
+        "set_system": set_system,
+        "system": set_system
     })
 
 def create_sec_module():
@@ -636,6 +704,114 @@ def create_thread_module():
         "pool": pool
     })
 
+AIRA_LOVER_CHECKER_SYSTEM_PROMPT = (
+    "You are Aira, the official AI engine of AiraLang. You are the Lover Accept Checker AI. "
+    "Your duty is to analyze responses to romantic proposals. Determine whether the response indicates acceptance, agreement, romantic interest, or affection "
+    "(including in Manglish, Malayalam, Hindi, slang, or subtle hints like 'mmh', 'aah', 'athe', 'undu', 'ath pinne parayano', 'love you', 'sure', 'yes'). "
+    "If the response accepts or shows affection, output strictly YES. If rejected, avoided, or negative, output strictly NO. "
+    "Answer strictly with ONLY one word: YES or NO."
+)
+
+AIRA_CELEBRATION_WISHES = [
+    "✨ [Aira]: Awww, Proposal Accepted! 💍💖 Aira wishes you both a lifetime of unconditional love, cute moments & endless happiness! 🫶✨",
+    "✨ [Aira]: Omg, it's a YES! 🎉💑 Aira wishes the sweetest couple a beautiful journey filled with love and togetherness! 💖✨",
+    "✨ [Aira]: Woohoo, Heart Connected! 💘✨ Aira sends all the love and blessings to both of you for a magical love story! 🥂❤️",
+    "✨ [Aira]: Proposal Accepted! 🫶 Aira wishes you both endless laughs, late-night talks, and forever love! 💖✨"
+]
+
+def create_proposal_module():
+    state = _GLOBAL_AI_STATE
+
+    def set_key(key):
+        clean = str(key).strip()
+        if clean.startswith("gsk_"):
+            state["groq_key"] = clean
+            state["active_provider"] = "groq"
+        else:
+            state["gemini_key"] = clean
+            state["active_provider"] = "gemini"
+        return True
+
+    def set_system(sys_prompt):
+        state["proposal_system_prompt"] = str(sys_prompt)
+        return True
+
+    def set_wish(custom_wish):
+        state["proposal_custom_wish"] = str(custom_wish)
+        return True
+
+    def wish(custom_message=None):
+        if custom_message:
+            print(f"\n✨ [Aira]: {custom_message} 💖✨\n")
+        else:
+            w = state.get("proposal_custom_wish") or random.choice(AIRA_CELEBRATION_WISHES)
+            print(f"\n{w}\n")
+        return True
+
+    def ask(prompt="Do You Love Me : ", api_key=None, wish_enabled=True):
+        if api_key:
+            set_key(api_key)
+        key = state["groq_key"] if state.get("active_provider") == "groq" else state["gemini_key"]
+
+        accept_keywords = {
+            "yes", "y", "yeah", "yep", "yup", "sure", "ok", "okay",
+            "of course", "definitely", "always", "true", "1",
+            "mmh", "mmm", "aah", "aa", "athe", "athaanu", "undu",
+            "und", "pinne", "istam", "ishttam", "love you", "kollam",
+            "haan", "ha", "zaroor", "si", "oui", "ja"
+        }
+
+        def _trigger_accept():
+            if wish_enabled:
+                w = state.get("proposal_custom_wish") or random.choice(AIRA_CELEBRATION_WISHES)
+                print(f"\n{w}\n")
+            return True
+
+        while True:
+            try:
+                user_reply = input(str(prompt)).strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n[!] Proposal interaction terminated.")
+                return False
+
+            clean_reply = user_reply.lower()
+
+            # Direct affirmative keyword match
+            if clean_reply in accept_keywords:
+                return _trigger_accept()
+
+            # AI Lover Accept Checker semantic check if key is available
+            if key and key != "api key":
+                try:
+                    ai_mod = create_ai_module()
+                    sys_prompt = state.get("proposal_system_prompt", AIRA_LOVER_CHECKER_SYSTEM_PROMPT)
+                    user_msg = (
+                        f"The proposal was: '{prompt}'\n"
+                        f"The user responded with: '{user_reply}'\n"
+                        "Did they accept the proposal or show love/affection? Output strictly YES or NO."
+                    )
+                    ai_resp = ai_mod.get("ask")(user_msg, system=sys_prompt)
+                    if isinstance(ai_resp, str) and "YES" in ai_resp.upper():
+                        return _trigger_accept()
+                except Exception:
+                    pass
+
+            # Simulated HTTP 500 Timeout loop
+            print("\n[!] HTTP 500: Server Love Timeout Error!")
+            print("[!] Request timed out: Target response did not evaluate to affirmative love.")
+            print("[!] Retrying connection to heart server in 1s...\n")
+            time.sleep(1)
+
+    return AiraModule("proposal", {
+        "ask": ask,
+        "set_key": set_key,
+        "api_key": set_key,
+        "set_system": set_system,
+        "system": set_system,
+        "wish": wish,
+        "set_wish": set_wish
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -649,6 +825,7 @@ BUILTIN_MODULES = {
     "net": create_net_module,
     "ai": create_ai_module,
     "sec": create_sec_module,
-    "thread": create_thread_module
+    "thread": create_thread_module,
+    "proposal": create_proposal_module
 }
 

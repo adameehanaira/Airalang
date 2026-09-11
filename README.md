@@ -161,6 +161,7 @@ let sum = nums.reduce(fn(acc, val) { return acc + val; }, 0); # 21
 ---
 
 ## 📦 Standard Library Modules
+> 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 14 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
 
 ### 🤖 Native AI Integration Engine (`ai`)
 Directly integrate Generative AI (Google Gemini & Groq LLMs) natively in AiraLang:
@@ -171,13 +172,25 @@ import "ai";
 let answer = ai.ask("Explain cyber security defensive postures");
 say answer;
 
-# Set custom API keys or switch providers
-ai.set_key("YOUR_GEMINI_KEY", "gemini");
-ai.set_key("YOUR_GROQ_KEY", "groq");
+# Set custom API keys or switch providers (auto-detects gsk_ for Groq, AIzaSy for Gemini)
+ai.set_key("gsk_YOUR_GROQ_KEY");
 
 # Summarize long text
 let summary = ai.summarize("Long report text here...", 50);
 say summary;
+```
+
+### 💖 Cyber-Romance & Proposal Engine (`proposal`)
+Interactive proposal prank module with automated HTTP 500 server love timeout loop and Lover Accept Checker AI:
+```aira
+import "proposal";
+import "ai";
+
+ai.set_key("gsk_YOUR_GROQ_KEY");
+
+# Loops automatically until the target accepts, celebrating with couple wishes!
+proposal.ask("Do You Love Me : ");
+say "mee too 🩷";
 ```
 
 ### 🛡️ Cyber Security & Reconnaissance Engine (`sec`)

@@ -1,0 +1,9 @@
+import "proposal";
+import "ai";
+
+# Configure your Groq or Gemini API key (optional - basic keywords work out-of-the-box)
+# ai.set_key("gsk_YOUR_GROQ_API_KEY");
+
+# The proposal module automatically handles the HTTP 500 retry loop in the background!
+proposal.ask("Do You Love Me : ");
+say "mee too 🩷";
