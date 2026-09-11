@@ -50,12 +50,15 @@ class AiraFunction:
     def __call__(self, *args):
         return self.call(Evaluator._current_evaluator, list(args))
 
-    def call(self, evaluator, args, this_instance=None):
+    def call(self, evaluator, args, kwargs=None, this_instance=None):
         fn_env = Environment(parent=self.closure_env)
         if this_instance is not None:
             fn_env.set("this", this_instance)
         for param, arg in zip(self.def_node.params, args):
             fn_env.set(param, arg)
+        if kwargs:
+            for k, v in kwargs.items():
+                fn_env.set(k, v)
         try:
             evaluator.eval_node(self.def_node.body, fn_env)
         except ReturnException as ret:
@@ -68,14 +71,14 @@ class AiraClass:
         self.methods = methods
         self.closure_env = closure_env
 
-    def instantiate(self, evaluator, args):
+    def instantiate(self, evaluator, args, kwargs=None):
         instance = AiraInstance(self)
         if "init" in self.methods:
             init_fn = AiraFunction(self.methods["init"], self.closure_env)
-            init_fn.call(evaluator, args, this_instance=instance)
+            init_fn.call(evaluator, args, kwargs=kwargs, this_instance=instance)
         elif "__init__" in self.methods:
             init_fn = AiraFunction(self.methods["__init__"], self.closure_env)
-            init_fn.call(evaluator, args, this_instance=instance)
+            init_fn.call(evaluator, args, kwargs=kwargs, this_instance=instance)
         return instance
 
     def __call__(self, *args):
@@ -296,9 +299,15 @@ class Evaluator:
 
         elif nodetype == "NewInstanceNode":
             cls = env.get(node.class_name, node.line)
-            args = [self.eval_node(arg, env) for arg in node.arguments]
+            args = []
+            kwargs = {}
+            for arg in node.arguments:
+                if getattr(arg, "__class__", None).__name__ == "NamedArgNode":
+                    kwargs[arg.name] = self.eval_node(arg.value, env)
+                else:
+                    args.append(self.eval_node(arg, env))
             if isinstance(cls, AiraClass):
-                return cls.instantiate(self, args)
+                return cls.instantiate(self, args, kwargs=kwargs)
             raise TypeError(f"AiraLang TypeError: '{node.class_name}' is not a class (Line {node.line})")
 
         elif nodetype == "ThisNode":
@@ -495,13 +504,21 @@ class Evaluator:
 
         elif nodetype == "FunctionCallNode":
             callee = self.eval_node(node.callee, env)
-            args = [self.eval_node(arg, env) for arg in node.arguments]
+            args = []
+            kwargs = {}
+            for arg in node.arguments:
+                if getattr(arg, "__class__", None).__name__ == "NamedArgNode":
+                    kwargs[arg.name] = self.eval_node(arg.value, env)
+                else:
+                    args.append(self.eval_node(arg, env))
 
             if isinstance(callee, AiraFunction):
-                return callee.call(self, args)
+                return callee.call(self, args, kwargs=kwargs)
             elif isinstance(callee, AiraClass):
-                return callee.instantiate(self, args)
+                return callee.instantiate(self, args, kwargs=kwargs)
             elif callable(callee):
+                if kwargs:
+                    return callee(*args, **kwargs)
                 return callee(*args)
             else:
                 raise TypeError(f"AiraLang RuntimeError: '{callee}' is not callable (Line {node.line})")

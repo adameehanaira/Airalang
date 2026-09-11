@@ -306,15 +306,23 @@ class Parser:
             return UnaryOpNode(op.value, right, op.line)
         return self.parse_postfix()
 
+    def parse_call_arg(self):
+        if self.current().type == "IDENTIFIER" and self.peek().type == "ASSIGN":
+            name_tok = self.expect("IDENTIFIER")
+            self.expect("ASSIGN")
+            val_expr = self.parse_expression()
+            return NamedArgNode(name_tok.value, val_expr, name_tok.line)
+        return self.parse_expression()
+
     def parse_postfix(self):
         atom = self.parse_atom()
         while True:
             if self.match("LPAREN"):
                 args = []
                 if self.current().type != "RPAREN":
-                    args.append(self.parse_expression())
+                    args.append(self.parse_call_arg())
                     while self.match("COMMA"):
-                        args.append(self.parse_expression())
+                        args.append(self.parse_call_arg())
                 self.expect("RPAREN")
                 atom = FunctionCallNode(atom, args, getattr(atom, 'line', self.current().line))
             elif self.match("DOT"):
@@ -347,9 +355,9 @@ class Parser:
             args = []
             if self.match("LPAREN"):
                 if self.current().type != "RPAREN":
-                    args.append(self.parse_expression())
+                    args.append(self.parse_call_arg())
                     while self.match("COMMA"):
-                        args.append(self.parse_expression())
+                        args.append(self.parse_call_arg())
                 self.expect("RPAREN")
             return NewInstanceNode(class_tok.value, args, tok.line)
         if self.match("IDENTIFIER"):

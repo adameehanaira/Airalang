@@ -176,3 +176,9 @@ class FunctionExprNode(ASTNode):
         self.body = body
         self.line = line
 
+class NamedArgNode(ASTNode):
+    def __init__(self, name, value, line):
+        self.name = name
+        self.value = value
+        self.line = line
+
