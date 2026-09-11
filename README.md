@@ -163,21 +163,25 @@ let sum = nums.reduce(fn(acc, val) { return acc + val; }, 0); # 21
 ## 📦 Standard Library Modules
 > 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 14 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
 
-### 🤖 Native AI Integration Engine (`ai`)
-Directly integrate Generative AI (Google Gemini & Groq LLMs) natively in AiraLang:
+### 🤖 Universal AI Integration Engine (`ai`)
+Directly integrate Generative AI from ANY provider in the world natively in AiraLang (OpenAI, DeepSeek, Anthropic Claude, Google Gemini, Groq, OpenRouter, Mistral, Ollama, Perplexity, Cerebras, or custom servers):
 ```aira
 import "ai";
 
-# 1-line query to AI models
-let answer = ai.ask("Explain cyber security defensive postures");
-say answer;
-
-# Set custom API keys or switch providers (auto-detects gsk_ for Groq, AIzaSy for Gemini)
+# 1. Automatic Key Prefix Detection (Groq, OpenRouter, Claude, Cerebras, Gemini, etc.)
 ai.set_key("gsk_YOUR_GROQ_KEY");
+say ai.ask("Explain cyber security defensive postures");
 
-# Summarize long text
-let summary = ai.summarize("Long report text here...", 50);
-say summary;
+# 2. Explicit Provider Selection (DeepSeek, OpenAI, Mistral, etc.)
+ai.set_provider("deepseek", "sk-YOUR_DEEPSEEK_KEY");
+say ai.ask("Optimize this sorting algorithm");
+
+# 3. 100% Offline Local AI with Ollama (Termux / PC)
+ai.set_provider("ollama", model="llama3.2");
+say ai.ask("Local offline AI query");
+
+# 4. Custom Enterprise Server (vLLM, LM Studio, Localhost)
+ai.set_endpoint("http://localhost:8000/v1/chat/completions", "token", "my-model");
 ```
 
 ### 💖 Cyber-Romance & Proposal Engine (`proposal`)

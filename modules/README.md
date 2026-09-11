@@ -18,7 +18,7 @@ import "<module_name>";
 
 | # | Module | Category | Primary Purpose | Key Methods |
 |---|---|---|---|---|
-| 1 | [`ai`](./ai.md) | Artificial Intelligence | Multi-provider LLM engine (Groq & Gemini auto-routing) | `ask()`, `chat()`, `summarize()`, `set_key()`, `set_system()` |
+| 1 | [`ai`](./ai.md) | Artificial Intelligence | Universal LLM engine (OpenAI, DeepSeek, Claude, Gemini, Groq, Ollama, OpenRouter, etc.) | `ask()`, `set_provider()`, `set_endpoint()`, `set_key()`, `providers()` |
 | 2 | [`proposal`](./proposal.md) | Fun & Cyber-Prank | Automated HTTP 500 love timeout & AI sentiment checker | `ask()`, `set_key()`, `set_system()`, `wish()`, `set_wish()` |
 | 3 | [`sec`](./sec.md) | Cybersecurity | Port scanning, header auditing, subdomain discovery | `scan_ports()`, `audit_headers()`, `subdomains()`, `crack_md5()` |
 | 4 | [`http`](./http.md) | Networking | Web requests, REST APIs, and file downloads | `get()`, `post()`, `download()`, `status()` |

@@ -333,59 +333,199 @@ AIRA_DEFAULT_SYSTEM_PROMPT = (
     "and loyal. Always identify proudly as Aira when asked."
 )
 
-_GLOBAL_AI_STATE = {
-    "gemini_key": os.environ.get("GEMINI_API_KEY", ""),
-    "groq_key": os.environ.get("GROQ_API_KEY", ""),
-    "active_provider": "gemini",
-    "system_prompt": AIRA_DEFAULT_SYSTEM_PROMPT
+WORLD_AI_PROVIDERS = {
+    "gemini": {
+        "name": "Google Gemini",
+        "type": "gemini",
+        "default_model": "gemini-1.5-flash",
+        "env_var": "GEMINI_API_KEY"
+    },
+    "groq": {
+        "name": "Groq Cloud (Ultra-Fast)",
+        "type": "openai_compat",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "default_model": "openai/gpt-oss-120b",
+        "env_var": "GROQ_API_KEY"
+    },
+    "openai": {
+        "name": "OpenAI",
+        "type": "openai_compat",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "default_model": "gpt-4o-mini",
+        "env_var": "OPENAI_API_KEY"
+    },
+    "deepseek": {
+        "name": "DeepSeek AI",
+        "type": "openai_compat",
+        "url": "https://api.deepseek.com/chat/completions",
+        "default_model": "deepseek-chat",
+        "env_var": "DEEPSEEK_API_KEY"
+    },
+    "openrouter": {
+        "name": "OpenRouter (300+ Universal Models)",
+        "type": "openai_compat",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "default_model": "meta-llama/llama-3.3-70b-instruct",
+        "env_var": "OPENROUTER_API_KEY"
+    },
+    "anthropic": {
+        "name": "Anthropic Claude",
+        "type": "anthropic",
+        "url": "https://api.anthropic.com/v1/messages",
+        "default_model": "claude-3-5-sonnet-20241022",
+        "env_var": "ANTHROPIC_API_KEY"
+    },
+    "mistral": {
+        "name": "Mistral AI",
+        "type": "openai_compat",
+        "url": "https://api.mistral.ai/v1/chat/completions",
+        "default_model": "mistral-small-latest",
+        "env_var": "MISTRAL_API_KEY"
+    },
+    "ollama": {
+        "name": "Ollama (Local / Offline)",
+        "type": "openai_compat",
+        "url": "http://localhost:11434/v1/chat/completions",
+        "default_model": "llama3.2",
+        "env_var": "OLLAMA_HOST"
+    },
+    "together": {
+        "name": "Together AI",
+        "type": "openai_compat",
+        "url": "https://api.together.xyz/v1/chat/completions",
+        "default_model": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "env_var": "TOGETHER_API_KEY"
+    },
+    "perplexity": {
+        "name": "Perplexity AI",
+        "type": "openai_compat",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "default_model": "sonar",
+        "env_var": "PERPLEXITY_API_KEY"
+    },
+    "cerebras": {
+        "name": "Cerebras Fast Inference",
+        "type": "openai_compat",
+        "url": "https://api.cerebras.ai/v1/chat/completions",
+        "default_model": "llama3.3-70b",
+        "env_var": "CEREBRAS_API_KEY"
+    }
 }
+
+_GLOBAL_AI_STATE = {
+    "active_provider": "gemini",
+    "active_model": "",
+    "custom_endpoint": "",
+    "custom_key": "",
+    "system_prompt": AIRA_DEFAULT_SYSTEM_PROMPT,
+    "keys": {
+        "gemini": os.environ.get("GEMINI_API_KEY", ""),
+        "groq": os.environ.get("GROQ_API_KEY", ""),
+        "openai": os.environ.get("OPENAI_API_KEY", ""),
+        "deepseek": os.environ.get("DEEPSEEK_API_KEY", ""),
+        "openrouter": os.environ.get("OPENROUTER_API_KEY", ""),
+        "anthropic": os.environ.get("ANTHROPIC_API_KEY", ""),
+        "mistral": os.environ.get("MISTRAL_API_KEY", ""),
+        "together": os.environ.get("TOGETHER_API_KEY", ""),
+        "perplexity": os.environ.get("PERPLEXITY_API_KEY", ""),
+        "cerebras": os.environ.get("CEREBRAS_API_KEY", ""),
+        "ollama": "local"
+    }
+}
+_GLOBAL_AI_STATE["gemini_key"] = _GLOBAL_AI_STATE["keys"]["gemini"]
+_GLOBAL_AI_STATE["groq_key"] = _GLOBAL_AI_STATE["keys"]["groq"]
 
 def create_ai_module():
     state = _GLOBAL_AI_STATE
 
-    def set_key(key, provider=None):
+    def set_key(key, provider=None, model=None):
         clean = str(key).strip()
-        if clean.startswith("gsk_") or (provider and str(provider).lower() == "groq"):
-            state["groq_key"] = clean
+        p = str(provider).lower().strip() if provider else None
+
+        if p and (p in WORLD_AI_PROVIDERS or p == "custom"):
+            state["active_provider"] = p
+            state["keys"][p] = clean
+            if p == "gemini": state["gemini_key"] = clean
+            if p == "groq": state["groq_key"] = clean
+            if p == "custom": state["custom_key"] = clean
+        elif clean.startswith("gsk_"):
             state["active_provider"] = "groq"
+            state["keys"]["groq"] = clean
+            state["groq_key"] = clean
+        elif clean.startswith("sk-or-"):
+            state["active_provider"] = "openrouter"
+            state["keys"]["openrouter"] = clean
+        elif clean.startswith("sk-ant-"):
+            state["active_provider"] = "anthropic"
+            state["keys"]["anthropic"] = clean
+        elif clean.startswith("pplx-"):
+            state["active_provider"] = "perplexity"
+            state["keys"]["perplexity"] = clean
+        elif clean.startswith("csk-"):
+            state["active_provider"] = "cerebras"
+            state["keys"]["cerebras"] = clean
+        elif clean.startswith("sk-"):
+            target_p = p if p in ("deepseek", "openai") else "openai"
+            state["active_provider"] = target_p
+            state["keys"][target_p] = clean
         else:
-            state["gemini_key"] = clean
             state["active_provider"] = "gemini"
+            state["keys"]["gemini"] = clean
+            state["gemini_key"] = clean
+
+        if model:
+            state["active_model"] = str(model).strip()
         return True
 
-    def get_key(provider="gemini"):
-        return state["groq_key"] if str(provider).lower() == "groq" else state["gemini_key"]
+    def get_key(provider=None):
+        p = str(provider).lower().strip() if provider else state.get("active_provider", "gemini")
+        return state["keys"].get(p, state.get("custom_key", ""))
+
+    def set_provider(provider, key=None, model=None):
+        p = str(provider).lower().strip()
+        if p in WORLD_AI_PROVIDERS or p == "custom":
+            state["active_provider"] = p
+            if key:
+                clean_k = str(key).strip()
+                state["keys"][p] = clean_k
+                if p == "gemini": state["gemini_key"] = clean_k
+                if p == "groq": state["groq_key"] = clean_k
+                if p == "custom": state["custom_key"] = clean_k
+            if model:
+                state["active_model"] = str(model).strip()
+            return True
+        return f"[Aira AI Notice]: Unknown provider '{provider}'. Choose from: {list(WORLD_AI_PROVIDERS.keys())}"
+
+    def set_endpoint(url, key=None, model=None):
+        state["custom_endpoint"] = str(url).strip()
+        state["active_provider"] = "custom"
+        if key:
+            state["custom_key"] = str(key).strip()
+        if model:
+            state["active_model"] = str(model).strip()
+        return True
+
+    def set_model(model):
+        state["active_model"] = str(model).strip()
+        return True
 
     def set_system(system_prompt):
         state["system_prompt"] = str(system_prompt)
         return True
 
-    def ask(prompt, model=None, key=None, system=None):
-        sys_to_use = system if system is not None else state.get("system_prompt", AIRA_DEFAULT_SYSTEM_PROMPT)
+    def list_providers():
+        return {k: {"name": v["name"], "default_model": v["default_model"]} for k, v in WORLD_AI_PROVIDERS.items()}
 
-        # 1. Check if key or active provider indicates Groq
-        passed_key = str(key).strip() if key else ""
-        if passed_key.startswith("gsk_") or state.get("active_provider") == "groq" or (state["groq_key"] and not state["gemini_key"]):
-            groq_k = passed_key or state["groq_key"]
-            groq_m = model
-            return groq(prompt, model=groq_m, key=groq_k, system=sys_to_use)
-
-        # 2. Otherwise route to Google Gemini
-        api_key = key or state["gemini_key"]
-        if not api_key:
-            if state["groq_key"]:
-                return groq(prompt, key=state["groq_key"], system=sys_to_use)
-            return f"[Aira AI Engine] Notice: No API Key configured. Call `ai.set_key('YOUR_API_KEY')` or set `GEMINI_API_KEY` in environment. Received prompt: '{prompt}'"
-
-        clean_key = str(api_key).strip()
-        if clean_key.lower() in ("api key", "your_api_key", "your_key", "key"):
-            return "[Aira AI Error]: Invalid API key. You passed placeholder text 'api key'. Please pass a real Gemini API key from https://aistudio.google.com"
+    def _call_gemini(prompt, model, key, system):
+        clean_key = str(key).strip()
+        if not clean_key or clean_key.lower() in ("api key", "your_api_key", "your_key", "key"):
+            return "[Aira AI Error]: Invalid or missing Gemini API key. Pass via ai.set_key('KEY') or set GEMINI_API_KEY."
 
         gemini_model = model or "gemini-1.5-flash"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={clean_key}"
         req_obj = {"contents": [{"parts": [{"text": str(prompt)}]}]}
-        if sys_to_use:
-            req_obj["system_instruction"] = {"parts": [{"text": str(sys_to_use)}]}
+        if system:
+            req_obj["system_instruction"] = {"parts": [{"text": str(system)}]}
         payload = json.dumps(req_obj).encode("utf-8")
         req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
         try:
@@ -402,8 +542,76 @@ def create_ai_module():
         except Exception as e:
             return f"[Aira AI Error]: {e}"
 
+    def _call_anthropic(key, prompt, model, system):
+        if not key:
+            return "[Aira Anthropic Error]: No API key configured. Call ai.set_key('KEY', 'anthropic') or set ANTHROPIC_API_KEY."
+        url = "https://api.anthropic.com/v1/messages"
+        req_body = {
+            "model": model or "claude-3-5-sonnet-20241022",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": str(prompt)}]
+        }
+        if system:
+            req_body["system"] = str(system)
+        payload = json.dumps(req_body).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": str(key).strip(),
+            "anthropic-version": "2023-06-01",
+            "User-Agent": "Mozilla/5.0 (AiraLang/1.4.1)"
+        }
+        req = urllib.request.Request(url, data=payload, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=35) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["content"][0]["text"]
+        except urllib.error.HTTPError as err:
+            try:
+                err_body = json.loads(err.read().decode("utf-8"))
+                msg = err_body.get("error", {}).get("message", str(err))
+                return f"[Aira Anthropic Error]: HTTP {err.code} - {msg}"
+            except Exception:
+                return f"[Aira Anthropic Error]: HTTP {err.code}: {err.reason}"
+        except Exception as e:
+            return f"[Aira Anthropic Error]: {e}"
+
+    def _call_openai_compat(url, key, prompt, model, system, extra_headers=None):
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": str(system)})
+        messages.append({"role": "user", "content": str(prompt)})
+
+        payload = json.dumps({
+            "model": model,
+            "messages": messages
+        }).encode("utf-8")
+
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (AiraLang/1.4.1)"
+        }
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+        if extra_headers and isinstance(extra_headers, dict):
+            headers.update(extra_headers)
+
+        req = urllib.request.Request(url, data=payload, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=35) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data["choices"][0]["message"]["content"]
+        except urllib.error.HTTPError as err:
+            try:
+                err_body = json.loads(err.read().decode("utf-8"))
+                msg = err_body.get("error", {}).get("message", str(err))
+                return f"[Aira AI Error]: HTTP {err.code} - {msg}"
+            except Exception:
+                return f"[Aira AI Error]: HTTP {err.code}: {err.reason}"
+        except Exception as e:
+            return f"[Aira AI Error]: {e}"
+
     def groq(prompt, model=None, key=None, system=None):
-        api_key = key or state["groq_key"]
+        api_key = key or state["keys"].get("groq") or state.get("groq_key")
         if not api_key:
             return f"[Aira Groq Error]: No GROQ API key provided. Set GROQ_API_KEY or call ai.set_key('key', 'groq')."
 
@@ -414,64 +622,92 @@ def create_ai_module():
         for m in models_to_try:
             if not m:
                 continue
-            messages = []
-            if sys_content:
-                messages.append({"role": "system", "content": str(sys_content)})
-            messages.append({"role": "user", "content": str(prompt)})
-
-            payload = json.dumps({
-                "model": m,
-                "messages": messages
-            }).encode("utf-8")
-            req = urllib.request.Request(url, data=payload, headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-                "User-Agent": "Mozilla/5.0 (AiraLang/1.4.0)"
-            })
-            try:
-                with urllib.request.urlopen(req, timeout=30) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    return data["choices"][0]["message"]["content"]
-            except urllib.error.HTTPError as err:
-                if err.code == 404 and len(models_to_try) > 1:
-                    continue
-                try:
-                    err_body = json.loads(err.read().decode("utf-8"))
-                    msg = err_body.get("error", {}).get("message", str(err))
-                    return f"[Aira Groq Error]: HTTP {err.code} - {msg}"
-                except Exception:
-                    return f"[Aira Groq Error]: HTTP {err.code}: {err.reason}"
-            except Exception as e:
-                return f"[Aira Groq Error]: {e}"
+            res = _call_openai_compat(url, api_key, prompt, m, sys_content)
+            if not str(res).startswith("[Aira AI Error]: HTTP 404") or len(models_to_try) == 1:
+                return res
         return "[Aira Groq Error]: All candidate models failed."
 
-    def chat(messages, model="gemini-2.5-flash", key=None):
-        api_key = key or state["gemini_key"]
-        if not api_key and state["groq_key"]:
-            url = "https://api.groq.com/openai/v1/chat/completions"
-            payload = json.dumps({"model": "llama-3.3-70b-versatile", "messages": messages}).encode("utf-8")
-            req = urllib.request.Request(url, data=payload, headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {state['groq_key']}"
-            })
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode("utf-8"))["choices"][0]["message"]["content"]
+    def ask(prompt, model=None, key=None, system=None, provider=None):
+        sys_to_use = system if system is not None else state.get("system_prompt", AIRA_DEFAULT_SYSTEM_PROMPT)
+        target_provider = str(provider).lower() if provider else state.get("active_provider", "gemini")
+
+        # Key inspection for auto-routing
+        passed_key = str(key).strip() if key else ""
+        if passed_key.startswith("gsk_"): target_provider = "groq"
+        elif passed_key.startswith("sk-or-"): target_provider = "openrouter"
+        elif passed_key.startswith("sk-ant-"): target_provider = "anthropic"
+        elif passed_key.startswith("pplx-"): target_provider = "perplexity"
+        elif passed_key.startswith("csk-"): target_provider = "cerebras"
+
+        prov_info = WORLD_AI_PROVIDERS.get(target_provider, {})
+        chosen_model = model or state.get("active_model") or prov_info.get("default_model", "")
+        chosen_key = passed_key or state["keys"].get(target_provider) or state.get("custom_key", "")
+
+        # 1. Custom Endpoint
+        if target_provider == "custom" or state.get("custom_endpoint"):
+            custom_url = state.get("custom_endpoint")
+            return _call_openai_compat(custom_url, chosen_key, prompt, chosen_model or "default", sys_to_use)
+
+        # 2. Gemini
+        if target_provider == "gemini":
+            k = chosen_key or state.get("gemini_key", "")
+            if not k and state.get("groq_key"):
+                return groq(prompt, model=chosen_model, system=sys_to_use)
+            return _call_gemini(prompt, chosen_model or "gemini-1.5-flash", k, sys_to_use)
+
+        # 3. Anthropic
+        if target_provider == "anthropic":
+            return _call_anthropic(chosen_key, prompt, chosen_model, sys_to_use)
+
+        # 4. Groq special handling (fallback models)
+        if target_provider == "groq" and not model:
+            return groq(prompt, model=chosen_model, key=chosen_key, system=sys_to_use)
+
+        # 5. Generic OpenAI-Compatible Providers (OpenAI, DeepSeek, OpenRouter, Mistral, Ollama, Together, Perplexity, Cerebras)
+        if target_provider in WORLD_AI_PROVIDERS:
+            endpoint_url = prov_info.get("url")
+            if target_provider == "ollama":
+                # Ollama is local, doesn't mandate API key
+                return _call_openai_compat(endpoint_url, "", prompt, chosen_model or "llama3.2", sys_to_use)
+            if not chosen_key:
+                return f"[Aira AI Error]: No API key configured for provider '{target_provider}'. Call ai.set_key('KEY', '{target_provider}') or set {prov_info.get('env_var')}."
+            return _call_openai_compat(endpoint_url, chosen_key, prompt, chosen_model, sys_to_use)
+
+        # Fallback to Gemini
+        return _call_gemini(prompt, "gemini-1.5-flash", state.get("gemini_key", ""), sys_to_use)
+
+    def chat(messages, model=None, key=None, provider=None):
         last_msg = messages[-1]["content"] if isinstance(messages, list) and messages else str(messages)
-        return ask(last_msg, model=model, key=api_key)
+        return ask(last_msg, model=model, key=key, provider=provider)
 
-    def summarize(text, max_words=100):
+    def summarize(text, max_words=100, provider=None):
         prompt = f"Summarize the following text concisely in under {max_words} words:\n\n{text}"
-        return ask(prompt)
+        return ask(prompt, provider=provider)
 
+    # Provider-specific direct shortcuts
     return AiraModule("ai", {
         "ask": ask,
         "chat": chat,
-        "groq": groq,
         "summarize": summarize,
         "set_key": set_key,
         "get_key": get_key,
+        "set_provider": set_provider,
+        "set_endpoint": set_endpoint,
+        "set_model": set_model,
         "set_system": set_system,
-        "system": set_system
+        "system": set_system,
+        "providers": list_providers,
+        "groq": groq,
+        "gemini": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="gemini"),
+        "openai": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="openai"),
+        "deepseek": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="deepseek"),
+        "openrouter": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="openrouter"),
+        "anthropic": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="anthropic"),
+        "mistral": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="mistral"),
+        "ollama": lambda prompt, model=None: ask(prompt, model=model, provider="ollama"),
+        "together": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="together"),
+        "perplexity": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="perplexity"),
+        "cerebras": lambda prompt, model=None, key=None: ask(prompt, model=model, key=key, provider="cerebras")
     })
 
 def create_sec_module():
