@@ -357,5 +357,28 @@ let output = utils.my_custom_function();
 
 ---
 
+## 📬 Official Contact & Enterprise Support
+
+<div align="center">
+
+[![Domain](https://img.shields.io/badge/Domain-airaai.work.gd-007ACC?style=for-the-badge&logo=cloudflare&logoColor=white)](http://airaai.work.gd)
+[![Security](https://img.shields.io/badge/Security-Responsible_Disclosure-red?style=for-the-badge&logo=shield&logoColor=white)](mailto:admin@airaai.work.gd)
+[![Organization](https://img.shields.io/badge/Organization-Aira_Group_of_Technology-blueviolet?style=for-the-badge)](https://github.com/adameehanaira)
+
+</div>
+
+Whether you are reporting a critical security vulnerability, requesting enterprise integrations, seeking technical assistance, or exploring research collaborations, reach out to our dedicated communications channels:
+
+| Channel | Dedicated Address | Scope & Purpose | Response SLA |
+| :--- | :--- | :--- | :---: |
+| 🛡️ **Admin & Security** | [`admin@airaai.work.gd`](mailto:admin@airaai.work.gd) | Core infrastructure, critical bug reports & responsible vulnerability disclosure | **Priority (24h)** |
+| ✉️ **Community Support** | [`support@airaai.work.gd`](mailto:support@airaai.work.gd) | General developer queries, syntax help, module requests & setup assistance | **Standard** |
+| 👑 **Founder & CEO** | [`me@airaai.work.gd`](mailto:me@airaai.work.gd) | Strategic partnerships, research collaborations, sponsorships & executive discussions | **Personal** |
+
+> 🔒 **Responsible Security Disclosure:** If you discover a potential vulnerability in AiraLang's compiler, runtime, or security modules (`sec`, `crypto`, `net`), please email `admin@airaai.work.gd` directly with reproducible steps prior to public disclosure.
+
+---
+
 ## 📜 License
 MIT Open Source License © 2026 Adam Eehan (Aira Group of Technology).
+
