@@ -1,4 +1,4 @@
-# 🌟 AiraLang (v1.4.0 Aira Cyber & AI Edition)
+# 🌟 AiraLang (v1.4.2 Aira Cyber & AI Edition)
 > **The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers**  
 > **Author & Creator:** Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
 
@@ -38,7 +38,58 @@ cd my_cyber_project && airalang main.aira
 
 ## 💻 Syntax & Features Guide
 
-### 1. Variables & Output
+### 1. Supported Data Types
+AiraLang is dynamically typed and natively supports 6 fundamental data types:
+
+| Data Type | Description | Syntax Example |
+| :--- | :--- | :--- |
+| **String** | UTF-8 text enclosed in single or double quotes | `let name = "Adam Eehan";` |
+| **Number** | Integers and floating-point decimal numbers | `let age = 19; let pi = 3.14159;` |
+| **Boolean** | Logical truth values (`true` or `false`) | `let is_leader = true;` |
+| **List** | Ordered, zero-indexed dynamic collections | `let tools = ["Termux", "AiraLang", 100];` |
+| **Dict / Object** | Key-value mapping pairs | `let profile = {"role": "CEO", "active": true};` |
+| **Null** | Represents the absence of a value | `let pending = null;` |
+
+---
+
+### 2. Operators & Symbols Reference
+
+#### 🧮 Arithmetic & Assignment Operators
+| Symbol | Operation | Example | Result |
+| :---: | :--- | :--- | :--- |
+| `+` | Addition / String Concat | `10 + 5` / `"Aira" + "Lang"` | `15` / `"AiraLang"` |
+| `-` | Subtraction | `20 - 7` | `13` |
+| `*` | Multiplication | `6 * 7` | `42` |
+| `/` | Division | `20 / 4` | `5.0` |
+| `%` | Modulo (Remainder) | `10 % 3` | `1` |
+| `=` | Variable Assignment | `let x = 10;` | Assigns 10 to `x` |
+| `+=`, `-=` | Add / Sub Assignment | `x += 5;` / `x -= 2;` | Updates `x` in place |
+| `*=`, `/=`, `%=` | Mul / Div / Mod Assignment | `x *= 2;` / `x /= 2;` | Updates `x` in place |
+
+#### ⚖️ Comparison & Equality Operators
+| Symbol | Operation | Description |
+| :---: | :--- | :--- |
+| `==` | Equal To | Evaluates `true` if left and right are equal (`x == 10`) |
+| `!=` or `≠` | **Not Equal To** | Evaluates `true` if values differ. **Supports both standard `!=` and math Unicode `≠` for mobile keyboards!** |
+| `<` / `>` | Less / Greater Than | Relational comparison (`5 < 10` is `true`, `10 > 5` is `true`) |
+| `<=` / `>=` | Less / Greater Than or Equal | Boundary comparison (`x <= 100`) |
+
+#### 🧠 Logical, Syntax & Control Symbols
+| Symbol | Category | Description |
+| :---: | :--- | :--- |
+| `and` | Logical AND | `true` if both expressions evaluate to true |
+| `or` | Logical OR | `true` if either expression evaluates to true |
+| `not` / `!` | Logical NOT | Inverts truth value (`!true` evaluates to `false`) |
+| `;` | Statement Terminator | Closes statements cleanly (optional in multi-line blocks) |
+| `( )` | Grouping / Arguments | Function calls (`fn(a, b)`) and condition blocks (`if (x > 0)`) |
+| `{ }` | Blocks / Dictionaries | Scope delimiters for classes, functions, and dictionary definitions |
+| `[ ]` | Lists / Subscripts | Array declaration and element indexing (`list[0]`) |
+| `.` | Member Access | Object property or module namespace access (`ai.ask()`) |
+| `#` / `//` | Comments | Developer annotations ignored by the compiler |
+
+---
+
+### 3. Variables & Output
 ```aira
 say "Hello, World!";
 let name = "Adam Boss";

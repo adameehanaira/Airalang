@@ -13,7 +13,7 @@ TOKEN_TYPES = [
     ("DIV_ASSIGN",     r"/="),
     ("MOD_ASSIGN",     r"%="),
     ("EQ_EQ",          r"=="),
-    ("NOT_EQ",         r"!="),
+    ("NOT_EQ",         r"(!=|≠)"),
     ("LTE",            r"<="),
     ("GTE",            r">="),
     ("ASSIGN",         r"="),

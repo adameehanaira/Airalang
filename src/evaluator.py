@@ -493,7 +493,7 @@ class Evaluator:
             if node.op == "/": return left / right
             if node.op == "%": return left % right
             if node.op == "==": return left == right
-            if node.op == "!=": return left != right
+            if node.op in ("!=", "≠"): return left != right
             if node.op == "<": return left < right
             if node.op == ">": return left > right
             if node.op == "<=": return left <= right
