@@ -8,7 +8,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.4.2 (Aira Cyber & AI Edition)"
+VERSION = "1.4.3 (Aira Cyber & Android Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m
@@ -21,7 +21,7 @@ ASCII_BANNER = f"""\033[1;36m
 \033[0m\033[1;30m---------------------------------------------------\033[0m
  \033[1;32m[+]\033[0m \033[1;37mEngine:\033[0m AiraLang v{VERSION}
  \033[1;34m[*]\033[0m \033[1;37mCreator:\033[0m {AUTHOR}
- \033[1;35m[⚡]\033[0m \033[1;37mModules:\033[0m ai, sec, thread, sqlite, net, crypto
+ \033[1;35m[⚡]\033[0m \033[1;37mModules:\033[0m android, ai, sec, thread, sqlite, net, crypto
  \033[1;33m[!]\033[0m Multiline support: open \033[1;32m{{\033[0m will continue on next line.
  \033[1;33m[!]\033[0m Type \033[1;31m'exit'\033[0m or \033[1;31m'quit'\033[0m to close REPL.
 \033[1;30m---------------------------------------------------\033[0m

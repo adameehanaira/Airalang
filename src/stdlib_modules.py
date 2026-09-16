@@ -12,6 +12,10 @@ import urllib.request
 import urllib.parse
 import urllib.error
 import threading
+import struct
+import zipfile
+import re
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 class AiraModule:
@@ -1048,6 +1052,342 @@ def create_proposal_module():
         "set_wish": set_wish
     })
 
+def create_android_module():
+    DANGEROUS_PERMISSIONS = {
+        "android.permission.READ_SMS": "Can read SMS messages and OTP verification codes",
+        "android.permission.RECEIVE_SMS": "Can intercept incoming SMS messages in real-time",
+        "android.permission.SEND_SMS": "Can send premium SMS messages without user consent",
+        "android.permission.ACCESS_FINE_LOCATION": "Accesses precise GPS physical coordinates",
+        "android.permission.ACCESS_COARSE_LOCATION": "Accesses network/cell-tower based location",
+        "android.permission.ACCESS_BACKGROUND_LOCATION": "Continuously tracks physical location in background",
+        "android.permission.RECORD_AUDIO": "Can access microphone and record ambient audio",
+        "android.permission.CAMERA": "Can access camera to capture covert photos or video",
+        "android.permission.READ_CONTACTS": "Can harvest complete address book and contacts",
+        "android.permission.WRITE_CONTACTS": "Can modify or delete address book entries",
+        "android.permission.READ_CALL_LOG": "Can read private phone call logs and history",
+        "android.permission.WRITE_CALL_LOG": "Can alter or delete telephone call history",
+        "android.permission.READ_PHONE_STATE": "Can read device IMEI, IMSI, and SIM serials",
+        "android.permission.READ_EXTERNAL_STORAGE": "Can read media, documents, and downloads on storage",
+        "android.permission.WRITE_EXTERNAL_STORAGE": "Can write or overwrite arbitrary storage files",
+        "android.permission.MANAGE_EXTERNAL_STORAGE": "Full filesystem access bypassing Android scoped storage",
+        "android.permission.SYSTEM_ALERT_WINDOW": "Can draw floating window overlays (Tapjacking risk)",
+        "android.permission.REQUEST_INSTALL_PACKAGES": "Can silently trigger or sideload unverified APKs",
+        "android.permission.USE_BIOMETRIC": "Requests biometric fingerprint or face authentication",
+        "android.permission.BIND_ACCESSIBILITY_SERVICE": "High risk: Can observe screen and simulate user inputs"
+    }
+
+    def _getprop(prop):
+        try:
+            p = subprocess.run(["/system/bin/getprop", str(prop)], capture_output=True, text=True, timeout=2)
+            return p.stdout.strip()
+        except Exception:
+            return ""
+
+    def get_prop(prop_name):
+        return _getprop(prop_name)
+
+    def device_info():
+        sdk_str = _getprop("ro.build.version.sdk")
+        return {
+            "brand": _getprop("ro.product.brand") or "Android",
+            "model": _getprop("ro.product.model") or "Generic Device",
+            "manufacturer": _getprop("ro.product.manufacturer") or "Unknown",
+            "android_version": _getprop("ro.build.version.release") or "Unknown",
+            "sdk_version": int(sdk_str) if sdk_str.isdigit() else 0,
+            "arch": _getprop("ro.product.cpu.abi") or (os.uname().machine if hasattr(os, "uname") else "unknown"),
+            "build_type": _getprop("ro.build.type") or "user"
+        }
+
+    def is_rooted():
+        su_paths = [
+            "/system/bin/su", "/system/xbin/su", "/sbin/su",
+            "/data/local/xbin/su", "/data/local/bin/su", "/system/sd/xbin/su",
+            "/su/bin/su", "/magisk/.core/bin/su", "/data/adb/magisk"
+        ]
+        for path in su_paths:
+            if os.path.exists(path):
+                return True
+        try:
+            p = subprocess.run(["which", "su"], capture_output=True, text=True, timeout=2)
+            if p.returncode == 0 and p.stdout.strip():
+                return True
+        except Exception:
+            pass
+        return False
+
+    def audit_device():
+        findings = []
+        recommendations = []
+        score = 100
+
+        rooted = is_rooted()
+        if rooted:
+            score -= 40
+            findings.append("CRITICAL: Root binary or Magisk artifact detected on device.")
+            recommendations.append("Unroot device or configure Magisk DenyList to protect sensitive data.")
+
+        flash_locked = _getprop("ro.boot.flash.locked")
+        bootloader_locked = (flash_locked == "1")
+        if not bootloader_locked and flash_locked:
+            score -= 25
+            findings.append("HIGH: Bootloader is UNLOCKED. Physical device integrity verification is disabled.")
+            recommendations.append("Lock bootloader to prevent unauthorized physical firmware attacks.")
+
+        avb_state = _getprop("ro.boot.verifiedbootstate") or "unknown"
+        if avb_state.lower() not in ("green", "unknown", ""):
+            score -= 20
+            findings.append(f"HIGH: Android Verified Boot (AVB) state is {avb_state.upper()} (Tampered system).")
+            recommendations.append("Reflash official OEM stock firmware to restore Verified Boot trust chain.")
+
+        debuggable = (_getprop("ro.debuggable") == "1")
+        if debuggable:
+            score -= 15
+            findings.append("MEDIUM: Android OS is built with ro.debuggable=1 (Debug ROM).")
+            recommendations.append("Switch to official release-keys user build.")
+
+        score = max(0, min(100, score))
+        if score >= 85:
+            posture = "SECURE"
+        elif score >= 60:
+            posture = "MODERATE_RISK"
+        else:
+            posture = "HIGH_RISK"
+
+        return {
+            "posture": posture,
+            "security_score": score,
+            "is_rooted": rooted,
+            "bootloader_locked": bootloader_locked,
+            "verified_boot": avb_state,
+            "is_debuggable_os": debuggable,
+            "findings": findings,
+            "recommendations": recommendations
+        }
+
+    def _extract_axml_strings(data):
+        strings = []
+        try:
+            offset = 8
+            chunk_type, header_size, chunk_size = struct.unpack("<HHI", data[offset:offset+8])
+            if chunk_type == 0x0001:
+                str_count, style_count, flags, str_start, style_start = struct.unpack("<IIIII", data[offset+8:offset+28])
+                is_utf8 = bool(flags & (1 << 8))
+                offsets_start = offset + header_size
+                offsets = [struct.unpack("<I", data[offsets_start + i*4 : offsets_start + (i+1)*4])[0] for i in range(str_count)]
+                base = offset + str_start
+                for off in offsets:
+                    cur = base + off
+                    if is_utf8:
+                        while cur < len(data) and data[cur] & 0x80:
+                            cur += 1
+                        cur += 1
+                        end = data.find(b"\x00", cur)
+                        if end != -1:
+                            strings.append(data[cur:end].decode("utf-8", errors="ignore"))
+                    else:
+                        u16_len = struct.unpack("<H", data[cur:cur+2])[0]
+                        cur += 2
+                        if u16_len & 0x8000:
+                            u16_len = ((u16_len & 0x7fff) << 16) | struct.unpack("<H", data[cur:cur+2])[0]
+                            cur += 2
+                        str_bytes = data[cur:cur + u16_len*2]
+                        strings.append(str_bytes.decode("utf-16le", errors="ignore"))
+        except Exception:
+            pass
+        return strings
+
+    def audit_apk(apk_path):
+        target = str(apk_path).strip()
+        if not os.path.exists(target):
+            return {
+                "error": f"File not found: {target}",
+                "apk_path": target,
+                "package_name": "None",
+                "risk_level": "NOT_FOUND",
+                "risk_score": 0,
+                "is_signed": False,
+                "debug_certificate": False,
+                "flags": {"debuggable": False, "allow_backup": False, "cleartext_traffic": False, "test_only": False},
+                "total_permissions_count": 0,
+                "dangerous_permissions": {},
+                "hardcoded_secrets": [],
+                "insecure_http_urls": [],
+                "findings": [f"File not found: {target}"]
+            }
+        if not zipfile.is_zipfile(target):
+            return {
+                "error": f"Invalid APK or ZIP format: {target}",
+                "apk_path": target,
+                "package_name": "None",
+                "risk_level": "INVALID_FORMAT",
+                "risk_score": 0,
+                "is_signed": False,
+                "debug_certificate": False,
+                "flags": {"debuggable": False, "allow_backup": False, "cleartext_traffic": False, "test_only": False},
+                "total_permissions_count": 0,
+                "dangerous_permissions": {},
+                "hardcoded_secrets": [],
+                "insecure_http_urls": [],
+                "findings": [f"Invalid APK or ZIP format: {target}"]
+            }
+
+        findings = []
+        risk_score = 0
+        package_name = "Unknown"
+        all_perms = []
+        dangerous_perms = {}
+        flags = {
+            "debuggable": False,
+            "allow_backup": False,
+            "cleartext_traffic": False,
+            "test_only": False
+        }
+        hardcoded_secrets = []
+        insecure_http_urls = set()
+
+        try:
+            with zipfile.ZipFile(target, "r") as z:
+                names = z.namelist()
+
+                # 1. Parse AndroidManifest.xml
+                if "AndroidManifest.xml" in names:
+                    m_data = z.read("AndroidManifest.xml")
+                    m_strings = _extract_axml_strings(m_data)
+
+                    for s in m_strings:
+                        if "android.permission." in s and s not in all_perms:
+                            all_perms.append(s)
+                            if s in DANGEROUS_PERMISSIONS:
+                                dangerous_perms[s] = DANGEROUS_PERMISSIONS[s]
+                        if package_name == "Unknown" and (s.startswith("com.") or s.startswith("org.") or s.startswith("net.") or s.startswith("io.")):
+                            if "." in s and " " not in s and len(s) < 64:
+                                package_name = s
+
+                    m_blob = str(m_strings)
+                    if "debuggable" in m_blob:
+                        flags["debuggable"] = True
+                        findings.append("CRITICAL: android:debuggable is ENABLED in manifest (Allows debugger & memory attach)!")
+                        risk_score += 35
+                    if "allowBackup" in m_blob:
+                        flags["allow_backup"] = True
+                        findings.append("MEDIUM: android:allowBackup is active (App data extractable via ADB backup).")
+                        risk_score += 15
+                    if "usesCleartextTraffic" in m_blob:
+                        flags["cleartext_traffic"] = True
+                        findings.append("MEDIUM: usesCleartextTraffic is active (Unencrypted HTTP allowed).")
+                        risk_score += 15
+
+                # 2. Inspect DEX bytecode for hardcoded keys & plaintext HTTP
+                dex_files = [f for f in names if f.endswith(".dex")][:3]
+                for df in dex_files:
+                    try:
+                        dex_content = z.read(df)
+                        for gk in set(re.findall(rb"AIza[0-9A-Za-z-_]{35}", dex_content)):
+                            hardcoded_secrets.append({"type": "Google API Key", "key": gk.decode("ascii", errors="ignore")})
+                        for ak in set(re.findall(rb"AKIA[0-9A-Z]{16}", dex_content)):
+                            hardcoded_secrets.append({"type": "AWS Access Key", "key": ak.decode("ascii", errors="ignore")})
+                        http_urls = re.findall(rb"http://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s\"\'<>]*)?", dex_content)
+                        for u in http_urls[:10]:
+                            insecure_http_urls.add(u.decode("ascii", errors="ignore"))
+                    except Exception:
+                        pass
+
+                # 3. Inspect META-INF Signatures
+                cert_files = [f for f in names if f.startswith("META-INF/") and f.endswith((".RSA", ".DSA", ".EC"))]
+                is_signed = len(cert_files) > 0
+                debug_cert = False
+                for cf in cert_files:
+                    try:
+                        cb = z.read(cf)
+                        if b"Android Debug" in cb or b"CN=Android Debug" in cb:
+                            debug_cert = True
+                            findings.append("CRITICAL: APK signed with insecure Android Debug Keystore!")
+                            risk_score += 40
+                    except Exception:
+                        pass
+
+        except Exception as e:
+            return {"error": f"Failed auditing APK: {e}"}
+
+        if len(dangerous_perms) > 5:
+            risk_score += 20
+            findings.append(f"HIGH: Requests {len(dangerous_perms)} high-risk dangerous permissions!")
+        elif len(dangerous_perms) > 0:
+            risk_score += 10
+
+        if hardcoded_secrets:
+            risk_score += 25
+            findings.append(f"HIGH: Identified {len(hardcoded_secrets)} potential hardcoded API/Cloud keys in DEX bytecode!")
+
+        if risk_score >= 50:
+            risk_level = "CRITICAL"
+        elif risk_score >= 30:
+            risk_level = "HIGH"
+        elif risk_score >= 15:
+            risk_level = "MEDIUM"
+        else:
+            risk_level = "LOW"
+
+        return {
+            "apk_path": target,
+            "package_name": package_name,
+            "risk_level": risk_level,
+            "risk_score": risk_score,
+            "is_signed": is_signed,
+            "debug_certificate": debug_cert,
+            "flags": flags,
+            "total_permissions_count": len(all_perms),
+            "dangerous_permissions": dangerous_perms,
+            "hardcoded_secrets": hardcoded_secrets,
+            "insecure_http_urls": list(insecure_http_urls)[:10],
+            "findings": findings
+        }
+
+    def audit_package(pkg_name):
+        pkg = str(pkg_name).strip()
+        try:
+            p = subprocess.run(["pm", "path", pkg], capture_output=True, text=True, timeout=3)
+            out = p.stdout.strip()
+            if "package:" in out:
+                apk_path = out.split("package:")[1].split("\n")[0].strip()
+                if os.path.exists(apk_path):
+                    return audit_apk(apk_path)
+        except Exception:
+            pass
+
+        for base_dir in ["/data/app", "/system/app", "/system/priv-app"]:
+            if os.path.exists(base_dir):
+                try:
+                    for entry in os.listdir(base_dir):
+                        if pkg in entry:
+                            full = os.path.join(base_dir, entry)
+                            if os.path.isfile(full) and full.endswith(".apk"):
+                                return audit_apk(full)
+                            elif os.path.isdir(full):
+                                for sub in os.listdir(full):
+                                    if sub.endswith(".apk"):
+                                        return audit_apk(os.path.join(full, sub))
+                except Exception:
+                    pass
+
+        return {
+            "package": pkg,
+            "status": "not_found",
+            "message": f"Could not locate APK for '{pkg}'. On unrooted Android, pass direct APK file path to android.audit_apk(path)."
+        }
+
+    return AiraModule("android", {
+        "device_info": device_info,
+        "info": device_info,
+        "audit_device": audit_device,
+        "audit": audit_device,
+        "is_rooted": is_rooted,
+        "check_root": is_rooted,
+        "audit_apk": audit_apk,
+        "audit_package": audit_package,
+        "get_prop": get_prop
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -1062,6 +1402,8 @@ BUILTIN_MODULES = {
     "ai": create_ai_module,
     "sec": create_sec_module,
     "thread": create_thread_module,
-    "proposal": create_proposal_module
+    "proposal": create_proposal_module,
+    "android": create_android_module,
+    "droidsec": create_android_module
 }
 

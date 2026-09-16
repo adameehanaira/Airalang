@@ -212,7 +212,7 @@ let sum = nums.reduce(fn(acc, val) { return acc + val; }, 0); # 21
 ---
 
 ## 📦 Standard Library Modules
-> 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 14 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
+> 📚 **Detailed Documentation:** For complete syntax, parameters, and examples for all 15 built-in modules, visit the [**Modules Catalog (`modules/`)**](./modules/README.md).
 
 ### 🤖 Universal AI Integration Engine (`ai`)
 Directly integrate Generative AI from ANY provider in the world natively in AiraLang (OpenAI, DeepSeek, Anthropic Claude, Google Gemini, Groq, OpenRouter, Mistral, Ollama, Perplexity, Cerebras, or custom servers):
@@ -233,6 +233,26 @@ say ai.ask("Local offline AI query");
 
 # 4. Custom Enterprise Server (vLLM, LM Studio, Localhost)
 ai.set_endpoint("http://localhost:8000/v1/chat/completions", "token", "my-model");
+```
+
+### 📱 Native Android Security & Inspection Engine (`android` / `droidsec`)
+Engineered natively for mobile penetration testing, device hardening, and zero-dependency static APK security auditing directly on Termux & Android:
+```aira
+import "android";
+
+# 1. Device Security Posture Audit (Root, Bootloader, AVB, Score)
+let dev = android.device_info();
+let audit = android.audit_device();
+say "Device: " + dev.brand + " " + dev.model;
+say "Security Score: " + audit.security_score + "/100";
+say "Device Posture: " + audit.posture;
+
+# 2. High-Speed Static APK Security Auditor
+let report = android.audit_apk("/sdcard/Download/target.apk");
+say "Package: " + report.package_name;
+say "Risk Level: " + report.risk_level;
+say "Dangerous Permissions: " + report.dangerous_permissions;
+say "Exposed Keys: " + report.hardcoded_secrets;
 ```
 
 ### 💖 Cyber-Romance & Proposal Engine (`proposal`)
