@@ -1,0 +1,11 @@
+# ===================================================
+# 🌟 AiraLang Script
+# 👑 Creator: Adam Eehan (Aira Group of Technology)
+# ===================================================
+
+say "🚀 Welcome to AiraLang!";
+
+let boss = "Adam Eehan";
+say "👑 Running script for Boss: " + boss;
+
+# Write your code below:

@@ -1,6 +1,20 @@
-# 🌟 AiraLang (v1.4.4 Cross-Platform & System Edition)
-> **The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers**  
-> **Author & Creator:** Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
+<p align="center">
+  <img src="./airalang.png" alt="AiraLang Logo" width="260">
+</p>
+
+<h1 align="center">AiraLang</h1>
+<p align="center">
+  <strong><em>Code the Higher Tomorrow</em></strong><br>
+  The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers<br>
+  <strong>Creator & Systems Architect:</strong> Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
+</p>
+
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=AiraGroupOfTechnology.airalang"><img src="https://img.shields.io/badge/VS_Code_Marketplace-AiraLang-007ACC?logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
+  <img src="https://img.shields.io/badge/Version-v1.4.4-brightgreen" alt="Version">
+  <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20Termux-blue" alt="OS">
+  <img src="https://img.shields.io/badge/License-MIT-purple.svg" alt="License">
+</p>
 
 ---
 

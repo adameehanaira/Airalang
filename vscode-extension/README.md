@@ -1,6 +1,11 @@
+<p align="center">
+  <img src="icon.png" alt="AiraLang Logo" width="180">
+</p>
+
 # AiraLang Language Support for VS Code
 
 Official Visual Studio Code extension for **AiraLang** — the modern systems, AI, and cybersecurity programming language created by **Adam Eehan (Founder & CEO, Aira Group of Technology)**.
+*Code the Higher Tomorrow.*
 
 ## ✨ Features
 * **Syntax Highlighting:** Complete token colorization for `.aira` files (`say`, `let`, `fn`, `import`, modules, operators, comments).
