@@ -257,7 +257,39 @@ say "⚡ Built by: " + creator;
     with open(os.path.join(proj_name, "README.md"), "w", encoding="utf-8") as f:
         f.write(f"# {proj_name}\\n\\nProject created with AiraLang v{VERSION}.\\n\\nRun:\\n```bash\\nairalang main.aira\\n```\\n")
     print(f"\033[1;32m[+] Created new AiraLang project:\033[0m {proj_name}/")
-    print(f"\033[1;34m[*] cd {proj_name} && airalang main.aira\033[0m")
+def revoke_ai_api_key():
+    from stdlib_modules import load_airalang_config, save_airalang_config, _GLOBAL_AI_STATE, prompt_developer_for_ai_key
+
+    CYAN = "\033[1;36m"
+    YELLOW = "\033[1;33m"
+    GREEN = "\033[1;32m"
+    RED = "\033[1;31m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+
+    cfg = load_airalang_config()
+    old_provider = cfg.get("active_provider", "none")
+
+    cfg["keys"] = {}
+    cfg["active_provider"] = "gemini"
+    cfg["ai_prompted"] = False
+    save_airalang_config(cfg)
+
+    for k in _GLOBAL_AI_STATE["keys"]:
+        if k != "ollama":
+            _GLOBAL_AI_STATE["keys"][k] = ""
+    _GLOBAL_AI_STATE["active_provider"] = "gemini"
+    _GLOBAL_AI_STATE["gemini_key"] = ""
+    _GLOBAL_AI_STATE["groq_key"] = ""
+    _GLOBAL_AI_STATE["custom_key"] = ""
+
+    print(f"\n{RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+    print(f"{RED}{BOLD}🔄 [Aira AI Engine - Key Revoked]:{RESET}")
+    print(f"{YELLOW}Previous API key(s) (active: {old_provider}) have been revoked and cleared.{RESET}")
+    print(f"{CYAN}Rate limit reset! You can now configure a fresh API key.{RESET}")
+    print(f"{RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+
+    prompt_developer_for_ai_key()
 
 def print_help():
     print(f"""\033[1;36mAiraLang v{VERSION}\033[0m
@@ -269,6 +301,7 @@ Creator: {AUTHOR}
   airalang run <script.aira>           Execute an AiraLang script
   airalang build <file.aira> [-o out]  Compile script to standalone executable
   airalang new <project_name>          Create a new AiraLang project scaffold
+  airalang --ai api revoke             Revoke active API key and configure a fresh one
   airalang --ai-setup                  Configure Aira AI Engine API key (interactive)
   airalang --set-key <key> [provider]  Set API key for provider (OpenRouter/Groq/OpenAI/Gemini)
   airalang -v, --version               Display version information
@@ -277,6 +310,19 @@ Creator: {AUTHOR}
 
 def main():
     if len(sys.argv) > 1:
+        args_str = " ".join(sys.argv[1:]).lower().strip()
+        if args_str in (
+            "--ai api revoke",
+            "ai api revoke",
+            "--ai revoke",
+            "ai revoke",
+            "--revoke-api",
+            "--ai-revoke",
+            "revoke-api"
+        ):
+            revoke_ai_api_key()
+            sys.exit(0)
+
         arg1 = sys.argv[1]
         if arg1 in ("-v", "--version"):
             print(f"AiraLang v{VERSION} | Creator: {AUTHOR}")
