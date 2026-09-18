@@ -2,9 +2,14 @@
   "name": "airalang",
   "displayName": "AiraLang Language Support",
   "description": "Rich language support, syntax highlighting, and code snippets for AiraLang.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "AiraGroupOfTechnology",
   "icon": "icon.png",
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:airalang",
+    "onCommand:airalang.runFile"
+  ],
   "author": {
     "name": "Adam Eehan (Aira Group Of Technology)"
   },
@@ -55,6 +60,37 @@
         "language": "airalang",
         "path": "./snippets/snippets.json"
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "airalang.runFile",
+        "title": "Run AiraLang File in Terminal",
+        "category": "AiraLang",
+        "icon": "$(play)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "airalang.runFile",
+          "group": "navigation",
+          "when": "editorLangId == airalang || resourceExtname == .aira"
+        }
+      ],
+      "editor/title/run": [
+        {
+          "command": "airalang.runFile",
+          "group": "1_run",
+          "when": "editorLangId == airalang || resourceExtname == .aira"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "airalang.runFile",
+          "group": "AiraLang",
+          "when": "editorLangId == airalang || resourceExtname == .aira"
+        }
+      ]
+    }
   }
 }
