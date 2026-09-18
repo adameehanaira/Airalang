@@ -1,9 +1,11 @@
+import sys
 from ast_nodes import *
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
+        self.warned_semicolons = set()
 
     def current(self):
         return self.tokens[self.pos]
@@ -26,6 +28,44 @@ class Parser:
             curr = self.current()
             raise SyntaxError(f"AiraLang SyntaxError: Expected '{type_}' but got '{curr.type}' ({repr(curr.value)}) at line {curr.line}, col {curr.col}")
         return tok
+
+    def consume_semicolon(self, line=None):
+        if self.match("SEMICOLON"):
+            return
+        if line is None:
+            line = self.tokens[self.pos - 1].line if self.pos > 0 else self.current().line
+        self.trigger_semicolon_recovery(line)
+
+    def trigger_semicolon_recovery(self, line):
+        if line in self.warned_semicolons:
+            return
+        self.warned_semicolons.add(line)
+
+        CYAN = "\033[1;36m"
+        YELLOW = "\033[1;33m"
+        MAGENTA = "\033[1;35m"
+        RESET = "\033[0m"
+        BOLD = "\033[1m"
+
+        warning = (
+            f"\n{CYAN}✨ [Aira Compiler Auto-Fix]:{RESET}\n"
+            f"{YELLOW}Hey there! I am Aira From Aira Group Of Technology by Adam Eehan.{RESET}\n"
+            f"Heyyy, here you missed a semicolon (;) at {BOLD}line {line}{RESET}!\n"
+            f"Please concentrate on your code, now you can relax, I've put it automatically.\n"
+            f"{MAGENTA}Take care and Enjoy your Coding 💻✨🚀{RESET}\n"
+        )
+        sys.stderr.write(warning)
+        sys.stderr.flush()
+
+    def parse_block(self):
+        self.expect("LBRACE")
+        stmts = []
+        while self.current().type not in ("RBRACE", "EOF"):
+            s = self.parse_statement()
+            if s:
+                stmts.append(s)
+        self.expect("RBRACE")
+        return BlockNode(stmts)
 
     def parse(self):
         statements = []
@@ -54,7 +94,7 @@ class Parser:
             else:
                 curr = self.current()
                 raise SyntaxError(f"AiraLang SyntaxError: Expected module name or string after '{tok.value}' at line {curr.line}, col {curr.col}")
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return ImportStatementNode(str(mod_tok.value), tok.line)
 
         # say / print statement: `say "A", "B", 10;`
@@ -63,7 +103,7 @@ class Parser:
             expressions = [self.parse_expression()]
             while self.match("COMMA"):
                 expressions.append(self.parse_expression())
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return SayStatementNode(expressions, tok.line)
 
         # let statement: `let name = expr;`
@@ -72,7 +112,7 @@ class Parser:
             name_tok = self.expect("IDENTIFIER")
             self.expect("ASSIGN")
             expr = self.parse_expression()
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return LetStatementNode(name_tok.value, expr, tok.line)
 
         # if statement: `if (cond) { ... } else if (cond2) { ... } else { ... }`
@@ -82,13 +122,19 @@ class Parser:
             cond = self.parse_expression()
             if has_paren:
                 self.expect("RPAREN")
-            then_branch = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for if-statement at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            then_branch = self.parse_block()
             else_branch = None
             if self.match("ELSE"):
                 if self.current().type == "IF":
                     else_branch = self.parse_statement()
                 else:
-                    else_branch = self.parse_block_or_statement()
+                    if self.current().type != "LBRACE":
+                        curr = self.current()
+                        raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for else-block at line {self.tokens[self.pos - 1].line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+                    else_branch = self.parse_block()
             return IfStatementNode(cond, then_branch, else_branch, tok.line)
 
         # while statement: `while (cond) { ... }`
@@ -98,7 +144,10 @@ class Parser:
             cond = self.parse_expression()
             if has_paren:
                 self.expect("RPAREN")
-            body = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for while loop at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            body = self.parse_block()
             return WhileStatementNode(cond, body, tok.line)
 
         # for statement: `for item in items { ... }`
@@ -111,13 +160,19 @@ class Parser:
             iterable = self.parse_expression()
             if has_paren:
                 self.expect("RPAREN")
-            body = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for for-loop at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            body = self.parse_block()
             return ForInStatementNode(var_tok.value, iterable, body, tok.line)
 
         # try / catch statement: `try { ... } catch (err) { ... }`
         if tok.type == "TRY":
             self.pos += 1
-            try_body = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for try block at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            try_body = self.parse_block()
             self.expect("CATCH")
             has_paren = self.match("LPAREN")
             err_var = "error"
@@ -125,26 +180,29 @@ class Parser:
                 err_var = self.expect("IDENTIFIER").value
             if has_paren:
                 self.expect("RPAREN")
-            catch_body = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for catch block at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            catch_body = self.parse_block()
             return TryCatchStatementNode(try_body, err_var, catch_body, tok.line)
 
         # throw statement: `throw "Error description";`
         if tok.type == "THROW":
             self.pos += 1
             expr = self.parse_expression()
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return ThrowStatementNode(expr, tok.line)
 
         # break statement: `break;`
         if tok.type == "BREAK":
             self.pos += 1
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return BreakStatementNode(tok.line)
 
         # continue statement: `continue;`
         if tok.type == "CONTINUE":
             self.pos += 1
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return ContinueStatementNode(tok.line)
 
         # fn statement: `fn name(a, b) { ... }`
@@ -158,13 +216,19 @@ class Parser:
                 while self.match("COMMA"):
                     params.append(self.expect("IDENTIFIER").value)
             self.expect("RPAREN")
-            body = self.parse_block_or_statement()
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for function '{name_tok.value}' at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
+            body = self.parse_block()
             return FunctionDefNode(name_tok.value, params, body, tok.line)
 
         # class statement: `class Person { fn init(name) { ... } fn greet() { ... } }`
         if tok.type == "CLASS":
             self.pos += 1
             name_tok = self.expect("IDENTIFIER")
+            if self.current().type != "LBRACE":
+                curr = self.current()
+                raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for class '{name_tok.value}' at line {tok.line}. Block braces '{{}}' are mandatory in AiraLang! Found '{curr.value or curr.type}' instead.")
             self.expect("LBRACE")
             methods = {}
             while self.current().type != "RBRACE" and self.current().type != "EOF":
@@ -180,7 +244,10 @@ class Parser:
                         while self.match("COMMA"):
                             m_params.append(self.expect("IDENTIFIER").value)
                     self.expect("RPAREN")
-                    m_body = self.parse_block_or_statement()
+                    if self.current().type != "LBRACE":
+                        curr = self.current()
+                        raise SyntaxError(f"AiraLang SyntaxError: Missing block brace '{{' for method '{m_name_tok.value}' in class '{name_tok.value}' at line {m_name_tok.line}. Block braces '{{}}' are mandatory in AiraLang!")
+                    m_body = self.parse_block()
                     methods[m_name_tok.value] = FunctionDefNode(m_name_tok.value, m_params, m_body, m_name_tok.line)
                 elif self.match("SEMICOLON"):
                     pass
@@ -196,7 +263,7 @@ class Parser:
             expr = None
             if self.current().type not in ("SEMICOLON", "RBRACE", "EOF"):
                 expr = self.parse_expression()
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
             return ReturnStatementNode(expr, tok.line)
 
         # expression / assignment / shorthand assignment statement
@@ -204,7 +271,7 @@ class Parser:
         assign_op = self.match("ASSIGN", "PLUS_ASSIGN", "MINUS_ASSIGN", "MUL_ASSIGN", "DIV_ASSIGN", "MOD_ASSIGN")
         if assign_op:
             val_expr = self.parse_expression()
-            self.match("SEMICOLON")
+            self.consume_semicolon(tok.line)
 
             if assign_op.type != "ASSIGN":
                 bin_op_symbol = {
@@ -225,7 +292,7 @@ class Parser:
             else:
                 raise SyntaxError(f"AiraLang SyntaxError: Invalid assignment target at line {tok.line}")
 
-        self.match("SEMICOLON")
+        self.consume_semicolon(tok.line)
         return ExpressionStatementNode(expr)
 
     def parse_block_or_statement(self):

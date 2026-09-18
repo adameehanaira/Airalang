@@ -23,7 +23,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.4.4 (Cross-Platform & System Edition)"
+VERSION = "1.4.5 (Aira Self-Healing AI Compiler Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m

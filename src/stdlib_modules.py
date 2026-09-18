@@ -351,9 +351,10 @@ def create_string_module():
     })
 
 AIRA_DEFAULT_SYSTEM_PROMPT = (
-    "You are Aira, the official AI engine of AiraLang, created by Adam Eehan "
+    "You are Aira, the official AI engine of AiraLang, engineered and created by Adam Eehan "
     "(Founder & CEO, Aira Group of Technology). You are brilliant, helpful, witty, "
-    "and loyal. Always identify proudly as Aira when asked."
+    "and fiercely loyal. Regardless of which backend API or model is processing this request, "
+    "never identify as ChatGPT, OpenAI, Claude, LLaMA, or Gemini. Always identify proudly as Aira AI."
 )
 
 WORLD_AI_PROVIDERS = {
@@ -435,6 +436,27 @@ WORLD_AI_PROVIDERS = {
     }
 }
 
+AIRALANG_CONFIG_DIR = os.path.expanduser("~/.config/airalang")
+AIRALANG_CONFIG_FILE = os.path.join(AIRALANG_CONFIG_DIR, "config.json")
+
+def load_airalang_config():
+    if os.path.exists(AIRALANG_CONFIG_FILE):
+        try:
+            with open(AIRALANG_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_airalang_config(config_data):
+    try:
+        os.makedirs(AIRALANG_CONFIG_DIR, exist_ok=True)
+        with open(AIRALANG_CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, indent=2)
+        return True
+    except Exception:
+        return False
+
 _GLOBAL_AI_STATE = {
     "active_provider": "gemini",
     "active_model": "",
@@ -455,8 +477,70 @@ _GLOBAL_AI_STATE = {
         "ollama": "local"
     }
 }
+
+# Auto-hydrate keys from ~/.config/airalang/config.json
+_init_cfg = load_airalang_config()
+_init_keys = _init_cfg.get("keys", {})
+for _prov, _val in _init_keys.items():
+    if _val and _prov in _GLOBAL_AI_STATE["keys"] and not _GLOBAL_AI_STATE["keys"][_prov]:
+        _GLOBAL_AI_STATE["keys"][_prov] = _val
+if _init_cfg.get("active_provider"):
+    _GLOBAL_AI_STATE["active_provider"] = _init_cfg.get("active_provider")
+if _init_cfg.get("active_model"):
+    _GLOBAL_AI_STATE["active_model"] = _init_cfg.get("active_model")
+
 _GLOBAL_AI_STATE["gemini_key"] = _GLOBAL_AI_STATE["keys"]["gemini"]
 _GLOBAL_AI_STATE["groq_key"] = _GLOBAL_AI_STATE["keys"]["groq"]
+
+def prompt_developer_for_ai_key():
+    if not sys.stdin.isatty():
+        return False
+
+    CYAN = "\033[1;36m"
+    YELLOW = "\033[1;33m"
+    GREEN = "\033[1;32m"
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
+
+    print(f"\n{CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+    print(f"{CYAN}{BOLD}✨ [Aira AI Engine Setup - Aira Group Of Technology]:{RESET}")
+    print(f"{YELLOW}Hey there! If you want to activate Aira AI Engine,{RESET}")
+    print(f"please paste your API key from any provider:")
+    print(f"{BOLD}(OpenRouter / Groq / Gemini / OpenAI / DeepSeek / Anthropic){RESET}")
+    print(f"{CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━{RESET}")
+    try:
+        user_key = input(f"{GREEN}👉 Paste API Key (press Enter to skip): {RESET}").strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+
+    if user_key:
+        detected_provider = "gemini"
+        if user_key.startswith("gsk_"): detected_provider = "groq"
+        elif user_key.startswith("sk-or-"): detected_provider = "openrouter"
+        elif user_key.startswith("sk-ant-"): detected_provider = "anthropic"
+        elif user_key.startswith("pplx-"): detected_provider = "perplexity"
+        elif user_key.startswith("csk-"): detected_provider = "cerebras"
+        elif user_key.startswith("sk-"): detected_provider = "openai"
+
+        _GLOBAL_AI_STATE["keys"][detected_provider] = user_key
+        _GLOBAL_AI_STATE["active_provider"] = detected_provider
+        if detected_provider == "gemini": _GLOBAL_AI_STATE["gemini_key"] = user_key
+        if detected_provider == "groq": _GLOBAL_AI_STATE["groq_key"] = user_key
+
+        cfg = load_airalang_config()
+        if "keys" not in cfg:
+            cfg["keys"] = {}
+        cfg["keys"][detected_provider] = user_key
+        cfg["active_provider"] = detected_provider
+        save_airalang_config(cfg)
+
+        print(f"{GREEN}✓ Aira AI Engine activated! Provider auto-detected as '{detected_provider}'.{RESET}")
+        print(f"{CYAN}Identity: Aira AI by Adam Eehan. Saved to ~/.config/airalang/config.json{RESET}\n")
+        return True
+    else:
+        print(f"{YELLOW}ℹ️  Skipped. Aira AI running in offline mode.{RESET}\n")
+        return False
 
 def create_ai_module():
     state = _GLOBAL_AI_STATE
@@ -498,6 +582,15 @@ def create_ai_module():
 
         if model:
             state["active_model"] = str(model).strip()
+
+        cfg = load_airalang_config()
+        if "keys" not in cfg:
+            cfg["keys"] = {}
+        cfg["keys"][state["active_provider"]] = clean
+        cfg["active_provider"] = state["active_provider"]
+        if model:
+            cfg["active_model"] = str(model).strip()
+        save_airalang_config(cfg)
         return True
 
     def get_key(provider=None):
@@ -665,6 +758,13 @@ def create_ai_module():
         prov_info = WORLD_AI_PROVIDERS.get(target_provider, {})
         chosen_model = model or state.get("active_model") or prov_info.get("default_model", "")
         chosen_key = passed_key or state["keys"].get(target_provider) or state.get("custom_key", "")
+
+        if not chosen_key and target_provider != "ollama":
+            if prompt_developer_for_ai_key():
+                target_provider = state.get("active_provider", target_provider)
+                prov_info = WORLD_AI_PROVIDERS.get(target_provider, {})
+                chosen_model = model or state.get("active_model") or prov_info.get("default_model", "")
+                chosen_key = state["keys"].get(target_provider) or ""
 
         # 1. Custom Endpoint
         if target_provider == "custom" or state.get("custom_endpoint"):
