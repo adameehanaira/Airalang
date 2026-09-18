@@ -94,7 +94,41 @@ def is_balanced(code):
         
     return (braces <= 0 and parens <= 0 and brackets <= 0 and not in_single_quote and not in_double_quote)
 
-def run_code(source_code, evaluator=None):
+def auto_insert_semicolons_into_file(filepath, lines_to_fix):
+    if not filepath or not os.path.exists(filepath):
+        return
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.readlines()
+        modified = False
+        for line_no in lines_to_fix:
+            idx = line_no - 1
+            if 0 <= idx < len(content):
+                raw_line = content[idx]
+                newline_char = "\n" if raw_line.endswith("\n") else ""
+                stripped = raw_line.rstrip("\r\n")
+
+                code_part = stripped
+                comment_part = ""
+                for sep in ("//", "#"):
+                    if sep in stripped:
+                        parts = stripped.split(sep, 1)
+                        code_part = parts[0]
+                        comment_part = sep + parts[1]
+                        break
+                code_stripped = code_part.rstrip()
+                if code_stripped and not code_stripped.endswith(";"):
+                    code_stripped += ";"
+                    spacing = " " if comment_part else ""
+                    content[idx] = f"{code_stripped}{spacing}{comment_part}{newline_char}"
+                    modified = True
+        if modified:
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.writelines(content)
+    except Exception:
+        pass
+
+def run_code(source_code, evaluator=None, filepath=None):
     if evaluator is None:
         evaluator = Evaluator()
     try:
@@ -102,6 +136,8 @@ def run_code(source_code, evaluator=None):
         tokens = lexer.tokenize()
         parser = Parser(tokens)
         ast = parser.parse()
+        if filepath and parser.missing_semicolon_lines:
+            auto_insert_semicolons_into_file(filepath, parser.missing_semicolon_lines)
         return evaluator.eval(ast)
     except SyntaxError as e:
         print(f"\033[1;31m[!] SyntaxError:\033[0m {e}")
@@ -123,7 +159,7 @@ def run_file(filepath):
         pass
     with open(filepath, "r", encoding="utf-8") as f:
         code = f.read()
-    run_code(code)
+    run_code(code, filepath=filepath)
 
 def start_repl():
     print(ASCII_BANNER)

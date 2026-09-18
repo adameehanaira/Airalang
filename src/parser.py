@@ -5,7 +5,7 @@ class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
-        self.warned_semicolons = set()
+        self.missing_semicolon_lines = []
 
     def current(self):
         return self.tokens[self.pos]
@@ -34,38 +34,7 @@ class Parser:
             return
         if line is None:
             line = self.tokens[self.pos - 1].line if self.pos > 0 else self.current().line
-        self.trigger_semicolon_recovery(line)
-
-    def trigger_semicolon_recovery(self, line):
-        if line in self.warned_semicolons:
-            return
-        self.warned_semicolons.add(line)
-
-        CYAN = "\033[1;36m"
-        YELLOW = "\033[1;33m"
-        MAGENTA = "\033[1;35m"
-        RESET = "\033[0m"
-        BOLD = "\033[1m"
-
-        ai_tag = ""
-        try:
-            from stdlib_modules import _GLOBAL_AI_STATE
-            has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
-            if has_key:
-                active_p = _GLOBAL_AI_STATE.get("active_provider", "ai").upper()
-                ai_tag = f" [AI Engine: {active_p}]"
-        except Exception:
-            pass
-
-        warning = (
-            f"\n{CYAN}✨ [Aira Compiler Auto-Fix{ai_tag}]:{RESET}\n"
-            f"{YELLOW}Hey there! I am Aira From Aira Group Of Technology by Adam Eehan.{RESET}\n"
-            f"Heyyy, here you missed a semicolon (;) at {BOLD}line {line}{RESET}!\n"
-            f"Please concentrate on your code, now you can relax, I've put it automatically.\n"
-            f"{MAGENTA}Take care and Enjoy your Coding 💻✨🚀{RESET}\n"
-        )
-        sys.stderr.write(warning)
-        sys.stderr.flush()
+        self.missing_semicolon_lines.append(line)
 
     def parse_block(self):
         self.expect("LBRACE")
@@ -83,6 +52,34 @@ class Parser:
             stmt = self.parse_statement()
             if stmt:
                 statements.append(stmt)
+
+        if self.missing_semicolon_lines and not getattr(self, "suppress_semicolon_notice", False):
+            unique_lines = sorted(set(self.missing_semicolon_lines))
+            lines_str = ", ".join(str(l) for l in unique_lines)
+
+            CYAN = "\033[1;36m"
+            YELLOW = "\033[1;33m"
+            MAGENTA = "\033[1;35m"
+            RESET = "\033[0m"
+            BOLD = "\033[1m"
+
+            ai_tag = ""
+            try:
+                from stdlib_modules import _GLOBAL_AI_STATE
+                has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
+                if has_key:
+                    active_p = _GLOBAL_AI_STATE.get("active_provider", "ai").upper()
+                    ai_tag = f" [{active_p}]"
+            except Exception:
+                pass
+
+            single_notice = (
+                f"\n{CYAN}✨ [Aira Auto-Fix{ai_tag}]:{RESET} {YELLOW}Hey there! Semicolon (;) missed at line {lines_str}.{RESET} "
+                f"I've put it automatically into your code — relax & enjoy coding! {MAGENTA}💻✨🚀{RESET}\n"
+            )
+            sys.stderr.write(single_notice)
+            sys.stderr.flush()
+
         return ProgramNode(statements)
 
     def parse_statement(self):
