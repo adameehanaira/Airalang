@@ -7,6 +7,15 @@
   "author": {
     "name": "Adam Eehan (Aira Group of Technology)"
   },
+  "license": "MIT",
+  "homepage": "https://github.com/adameehanaira/Airalang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adameehanaira/Airalang.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adameehanaira/Airalang/issues"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
