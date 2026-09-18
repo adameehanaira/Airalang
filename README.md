@@ -44,6 +44,18 @@ cd my_cyber_project && airalang main.aira
 
 ---
 
+## 🎨 Official VS Code Extension
+Enjoy full syntax highlighting, auto-closing brackets, and smart snippets for `.aira` files in Visual Studio Code:
+* 📦 **Package:** [`airalang-1.0.0.vsix`](./vscode-extension/airalang-1.0.0.vsix)
+* ⚡ **Install via Terminal:**
+  ```bash
+  code --install-extension vscode-extension/airalang-1.0.0.vsix
+  ```
+* 🖱️ **Install via VS Code GUI:**
+  Open Extensions (`Ctrl + Shift + X`) ➔ Click the **`...` (Views and More Actions)** icon at top right ➔ Select **"Install from VSIX..."** ➔ Choose `airalang-1.0.0.vsix`!
+
+---
+
 ## 💻 Syntax & Features Guide
 
 ### 1. Supported Data Types
