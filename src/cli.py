@@ -1,6 +1,21 @@
-#!/data/data/com.termux/files/usr/bin/python3
 import sys
 import os
+
+# Cross-platform UTF-8 Console and ANSI Color configuration
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        hStdOut = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_ulong()
+        kernel32.GetConsoleMode(hStdOut, ctypes.byref(mode))
+        mode.value |= 0x0004
+        kernel32.SetConsoleMode(hStdOut, mode)
+    except Exception:
+        pass
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -8,7 +23,7 @@ from lexer import Lexer
 from parser import Parser
 from evaluator import Evaluator
 
-VERSION = "1.4.3 (Aira Cyber & Android Edition)"
+VERSION = "1.4.4 (Cross-Platform & System Edition)"
 AUTHOR = "Adam Eehan (Aira Group of Technology)"
 
 ASCII_BANNER = f"""\033[1;36m
@@ -21,7 +36,7 @@ ASCII_BANNER = f"""\033[1;36m
 \033[0m\033[1;30m---------------------------------------------------\033[0m
  \033[1;32m[+]\033[0m \033[1;37mEngine:\033[0m AiraLang v{VERSION}
  \033[1;34m[*]\033[0m \033[1;37mCreator:\033[0m {AUTHOR}
- \033[1;35m[⚡]\033[0m \033[1;37mModules:\033[0m android, ai, sec, thread, sqlite, net, crypto
+ \033[1;35m[⚡]\033[0m \033[1;37mModules:\033[0m system, android, ai, sec, sqlite, net, crypto
  \033[1;33m[!]\033[0m Multiline support: open \033[1;32m{{\033[0m will continue on next line.
  \033[1;33m[!]\033[0m Type \033[1;31m'exit'\033[0m or \033[1;31m'quit'\033[0m to close REPL.
 \033[1;30m---------------------------------------------------\033[0m

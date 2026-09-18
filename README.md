@@ -1,26 +1,34 @@
-# 🌟 AiraLang (v1.4.2 Aira Cyber & AI Edition)
+# 🌟 AiraLang (v1.4.4 Cross-Platform & System Edition)
 > **The High-Performance, Expressive & Modular Scripting Language for Creators, AI & Cybersecurity Engineers**  
 > **Author & Creator:** Adam Eehan (Founder & CEO, Aira Group of Technology) 👑
 
 ---
 
 ## ⚡ Introduction
-`AiraLang` is an open-source, dynamic, and expressive scripting language engineered from scratch with a focus on simplicity, developer freedom, high speed, native AI integrations, and advanced systems/cybersecurity capabilities.
+`AiraLang` is an open-source, dynamic, and expressive scripting language engineered from scratch with a focus on simplicity, developer freedom, high speed, native AI integrations, cross-platform host telemetry, and advanced systems/cybersecurity capabilities. Runs natively across **Linux, Termux, Windows, and macOS**.
 
 ---
 
-## 🚀 Quick Start in Termux / Linux
+## 🚀 Quick Start
 
-### 1. Interactive REPL Shell
-```bash
-airalang
-```
+### 🪟 Windows Setup
+1. Run `install.bat` (or add `Airalang\bin` to your User PATH).
+2. Execute directly in Command Prompt or PowerShell:
+   ```cmd
+   airalang script.aira
+   ```
 
-### 2. Run an AiraLang Script
-```bash
-airalang script.aira
-# or: airalang run script.aira
-```
+### 🐧 Termux / Linux Setup
+1. Run `./install.sh`
+2. Interactive REPL:
+   ```bash
+   airalang
+   ```
+3. Run an AiraLang Script:
+   ```bash
+   airalang script.aira
+   # or: airalang run script.aira
+   ```
 
 ### 3. Compile Script to Standalone Executable Binary
 ```bash

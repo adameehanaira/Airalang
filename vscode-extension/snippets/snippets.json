@@ -1,0 +1,78 @@
+{
+  "Say Statement": {
+    "prefix": "say",
+    "body": [
+      "say \"${1:Hello, World!}\";"
+    ],
+    "description": "Output text using AiraLang say statement"
+  },
+  "Variable Declaration": {
+    "prefix": "let",
+    "body": [
+      "let ${1:variable} = ${2:value};"
+    ],
+    "description": "Declare a new variable in AiraLang"
+  },
+  "Function Definition": {
+    "prefix": "fn",
+    "body": [
+      "fn ${1:name}(${2:params}) {",
+      "\t${3:// code here}",
+      "\treturn ${4:null};",
+      "}"
+    ],
+    "description": "Define a function in AiraLang"
+  },
+  "If-Else Statement": {
+    "prefix": "ifelse",
+    "body": [
+      "if (${1:condition}) {",
+      "\t${2:// true branch}",
+      "} else {",
+      "\t${3:// false branch}",
+      "}"
+    ],
+    "description": "If-Else condition in AiraLang"
+  },
+  "Import AI Module": {
+    "prefix": "impai",
+    "body": [
+      "import \"ai\";",
+      "ai.set_key(\"${1:YOUR_API_KEY}\");",
+      "let reply = ai.ask(\"${2:Hello, Aira!}\");",
+      "say reply;"
+    ],
+    "description": "Import and query AiraLang Universal AI module"
+  },
+  "Import System Module": {
+    "prefix": "impsys",
+    "body": [
+      "import \"system\";",
+      "let info = system.info();",
+      "say \"Platform: \" + info.platform;",
+      "say \"CPU: \" + info.cpu.name;",
+      "say \"GPU: \" + info.gpu.name;",
+      "say \"RAM: \" + info.ram.used_gb + \" / \" + info.ram.total_gb + \" GB\";"
+    ],
+    "description": "Import and inspect PC system and GPU metrics"
+  },
+  "Import Android Module": {
+    "prefix": "impdroid",
+    "body": [
+      "import \"android\";",
+      "let audit = android.audit_device();",
+      "say \"Device Posture: \" + audit.posture;",
+      "say \"Security Score: \" + audit.security_score + \"/100\";"
+    ],
+    "description": "Import and audit Android device security"
+  },
+  "Proposal Prank Module": {
+    "prefix": "impprop",
+    "body": [
+      "import \"proposal\";",
+      "proposal.ask(\"${1:Do you love me?}\");",
+      "say \"${2:Mee too!}\";"
+    ],
+    "description": "AiraLang Proposal prank timeout loop"
+  }
+}

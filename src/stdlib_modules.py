@@ -199,6 +199,19 @@ def create_os_module():
         os.makedirs(path, exist_ok=True)
         return True
 
+    def get_args():
+        if len(sys.argv) > 1:
+            raw = sys.argv[1:]
+            while raw and raw[0] in ("run", "build", "new", "-v", "--version", "-h", "--help"):
+                raw = raw[1:]
+            if raw and (raw[0].endswith(".aira") or raw[0].endswith(".py") or "airalang" in raw[0] or "cli.py" in raw[0]):
+                raw = raw[1:]
+            return raw
+        return []
+
+    def exit_app(code=0):
+        sys.exit(int(code))
+
     return AiraModule("os", {
         "cmd": cmd,
         "system": cmd,
@@ -208,7 +221,13 @@ def create_os_module():
         "cwd": cwd,
         "getcwd": cwd,
         "listdir": listdir,
-        "mkdir": mkdir
+        "mkdir": mkdir,
+        "args": get_args,
+        "argv": get_args,
+        "exit": exit_app,
+        "is_windows": lambda: sys.platform == "win32",
+        "is_android": lambda: "android" in sys.platform.lower() or os.path.exists("/data/data/com.termux"),
+        "is_linux": lambda: sys.platform.startswith("linux") and not os.path.exists("/data/data/com.termux")
     })
 
 def create_math_module():
@@ -1388,6 +1407,157 @@ def create_android_module():
         "get_prop": get_prop
     })
 
+def create_system_module():
+    def get_gpu():
+        try:
+            p = subprocess.run(
+                ["nvidia-smi", "--query-gpu=name,memory.total,memory.free,driver_version,temperature.gpu", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=3
+            )
+            if p.returncode == 0 and p.stdout.strip():
+                parts = [x.strip() for x in p.stdout.strip().split(",")]
+                if len(parts) >= 5:
+                    return {
+                        "name": parts[0],
+                        "total_vram_mb": int(parts[1]),
+                        "free_vram_mb": int(parts[2]),
+                        "driver_version": parts[3],
+                        "temperature_c": int(parts[4]),
+                        "status": "active"
+                    }
+        except Exception:
+            pass
+        return {
+            "name": "Standard / Integrated Graphics",
+            "status": "integrated_or_unavailable",
+            "total_vram_mb": 0
+        }
+
+    def get_battery():
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                class SYSTEM_POWER_STATUS(ctypes.Structure):
+                    _fields_ = [
+                        ('ac', ctypes.c_byte),
+                        ('bf', ctypes.c_byte),
+                        ('pct', ctypes.c_byte),
+                        ('r', ctypes.c_byte),
+                        ('lt', ctypes.c_ulong),
+                        ('flt', ctypes.c_ulong),
+                    ]
+                s = SYSTEM_POWER_STATUS()
+                if ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(s)):
+                    return {
+                        "percentage": int(s.pct) if s.pct <= 100 else 100,
+                        "is_charging": bool(s.ac == 1),
+                        "power_source": "AC (Charger Plugged In)" if s.ac == 1 else "Battery"
+                    }
+            except Exception:
+                pass
+        for path in ["/sys/class/power_supply/battery", "/sys/class/power_supply/BAT0"]:
+            cap_file = os.path.join(path, "capacity")
+            status_file = os.path.join(path, "status")
+            if os.path.exists(cap_file):
+                try:
+                    with open(cap_file) as f:
+                        cap = int(f.read().strip())
+                    stat = "Discharging"
+                    if os.path.exists(status_file):
+                        with open(status_file) as f:
+                            stat = f.read().strip()
+                    return {
+                        "percentage": cap,
+                        "is_charging": stat.lower() == "charging",
+                        "power_source": stat
+                    }
+                except Exception:
+                    pass
+        return {"percentage": 100, "is_charging": True, "power_source": "AC / Desktop"}
+
+    def get_ram():
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ('dwLength', ctypes.c_ulong),
+                        ('dwMemoryLoad', ctypes.c_ulong),
+                        ('ullTotalPhys', ctypes.c_ulonglong),
+                        ('ullAvailPhys', ctypes.c_ulonglong),
+                        ('ullTotalPageFile', ctypes.c_ulonglong),
+                        ('ullAvailPageFile', ctypes.c_ulonglong),
+                        ('ullTotalVirtual', ctypes.c_ulonglong),
+                        ('ullAvailVirtual', ctypes.c_ulonglong),
+                        ('sullAvailExtendedVirtual', ctypes.c_ulonglong),
+                    ]
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                    total_gb = round(stat.ullTotalPhys / (1024 ** 3), 2)
+                    avail_gb = round(stat.ullAvailPhys / (1024 ** 3), 2)
+                    used_gb = round(total_gb - avail_gb, 2)
+                    return {
+                        "total_gb": total_gb,
+                        "available_gb": avail_gb,
+                        "used_gb": used_gb,
+                        "percent_used": int(stat.dwMemoryLoad)
+                    }
+            except Exception:
+                pass
+        try:
+            with open("/proc/meminfo") as f:
+                lines = f.readlines()
+            mem = {}
+            for l in lines:
+                parts = l.split(":")
+                if len(parts) == 2:
+                    mem[parts[0].strip()] = int(parts[1].split()[0])
+            total = round(mem.get("MemTotal", 0) / (1024 * 1024), 2)
+            avail = round(mem.get("MemAvailable", 0) / (1024 * 1024), 2)
+            return {"total_gb": total, "available_gb": avail, "used_gb": round(total - avail, 2), "percent_used": int(round(((total - avail) / total) * 100)) if total else 0}
+        except Exception:
+            return {"total_gb": 0, "available_gb": 0, "used_gb": 0, "percent_used": 0}
+
+    def get_cpu():
+        import multiprocessing
+        cores = multiprocessing.cpu_count()
+        cpu_name = "x86_64 Processor"
+        if sys.platform == "win32":
+            cpu_name = os.environ.get("PROCESSOR_IDENTIFIER", "x86_64 Processor")
+        else:
+            try:
+                with open("/proc/cpuinfo") as f:
+                    for line in f:
+                        if "model name" in line:
+                            cpu_name = line.split(":")[1].strip()
+                            break
+            except Exception:
+                pass
+        return {
+            "cores": cores,
+            "architecture": sys.platform,
+            "name": cpu_name
+        }
+
+    def get_info():
+        return {
+            "platform": sys.platform,
+            "cpu": get_cpu(),
+            "ram": get_ram(),
+            "gpu": get_gpu(),
+            "battery": get_battery()
+        }
+
+    return AiraModule("system", {
+        "info": get_info,
+        "device_info": get_info,
+        "gpu": get_gpu,
+        "battery": get_battery,
+        "ram": get_ram,
+        "cpu": get_cpu
+    })
+
 BUILTIN_MODULES = {
     "file": create_file_module,
     "os": create_os_module,
@@ -1404,6 +1574,8 @@ BUILTIN_MODULES = {
     "thread": create_thread_module,
     "proposal": create_proposal_module,
     "android": create_android_module,
-    "droidsec": create_android_module
+    "droidsec": create_android_module,
+    "system": create_system_module,
+    "hardware": create_system_module
 }
 

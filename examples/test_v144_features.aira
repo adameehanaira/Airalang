@@ -1,0 +1,23 @@
+import "system";
+import "os";
+
+say "========================================";
+say "⚡ AiraLang v1.4.4 Feature Verification";
+say "========================================";
+
+let info = system.info();
+say "💻 Platform: " + info.platform;
+say "🧠 CPU: " + info.cpu.name + " (" + info.cpu.cores + " Cores)";
+say "💾 RAM: " + info.ram.used_gb + " GB / " + info.ram.total_gb + " GB (" + info.ram.percent_used + "% used)";
+say "🎮 GPU: " + info.gpu.name;
+if (info.gpu.total_vram_mb > 0) {
+    say "   VRAM: " + info.gpu.total_vram_mb + " MB | Driver: " + info.gpu.driver_version;
+}
+say "🔋 Battery: " + info.battery.percentage + "% (" + info.battery.power_source + ")";
+
+say "";
+say "📁 OS Checks:";
+say "   Is Windows: " + os.is_windows();
+say "   Is Linux: " + os.is_linux();
+say "   CLI Args: " + os.args();
+say "========================================";
