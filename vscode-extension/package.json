@@ -3,9 +3,9 @@
   "displayName": "AiraLang Language Support",
   "description": "Rich language support, syntax highlighting, and code snippets for AiraLang.",
   "version": "1.0.0",
-  "publisher": "adameehan",
+  "publisher": "AiraGroupOfTechnology",
   "author": {
-    "name": "Adam Eehan (Aira Group of Technology)"
+    "name": "Adam Eehan (Aira Group Of Technology)"
   },
   "license": "MIT",
   "homepage": "https://github.com/adameehanaira/Airalang",
