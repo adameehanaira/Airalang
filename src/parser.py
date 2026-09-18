@@ -47,8 +47,18 @@ class Parser:
         RESET = "\033[0m"
         BOLD = "\033[1m"
 
+        ai_tag = ""
+        try:
+            from stdlib_modules import _GLOBAL_AI_STATE
+            has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
+            if has_key:
+                active_p = _GLOBAL_AI_STATE.get("active_provider", "ai").upper()
+                ai_tag = f" [AI Engine: {active_p}]"
+        except Exception:
+            pass
+
         warning = (
-            f"\n{CYAN}✨ [Aira Compiler Auto-Fix]:{RESET}\n"
+            f"\n{CYAN}✨ [Aira Compiler Auto-Fix{ai_tag}]:{RESET}\n"
             f"{YELLOW}Hey there! I am Aira From Aira Group Of Technology by Adam Eehan.{RESET}\n"
             f"Heyyy, here you missed a semicolon (;) at {BOLD}line {line}{RESET}!\n"
             f"Please concentrate on your code, now you can relax, I've put it automatically.\n"

@@ -533,14 +533,27 @@ def prompt_developer_for_ai_key():
             cfg["keys"] = {}
         cfg["keys"][detected_provider] = user_key
         cfg["active_provider"] = detected_provider
+        cfg["ai_prompted"] = True
         save_airalang_config(cfg)
 
         print(f"{GREEN}✓ Aira AI Engine activated! Provider auto-detected as '{detected_provider}'.{RESET}")
         print(f"{CYAN}Identity: Aira AI by Adam Eehan. Saved to ~/.config/airalang/config.json{RESET}\n")
         return True
     else:
-        print(f"{YELLOW}ℹ️  Skipped. Aira AI running in offline mode.{RESET}\n")
+        cfg = load_airalang_config()
+        cfg["ai_prompted"] = True
+        save_airalang_config(cfg)
+        print(f"{YELLOW}ℹ️  Skipped. Aira AI running in offline mode. (Run 'airalang --ai-setup' anytime to activate){RESET}\n")
         return False
+
+def check_and_prompt_ai_engine(force=False):
+    cfg = load_airalang_config()
+    has_key = any(v for k, v in _GLOBAL_AI_STATE["keys"].items() if k != "ollama" and v)
+    if has_key and not force:
+        return True
+    if cfg.get("ai_prompted") and not force:
+        return False
+    return prompt_developer_for_ai_key()
 
 def create_ai_module():
     state = _GLOBAL_AI_STATE

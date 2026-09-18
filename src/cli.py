@@ -116,12 +116,22 @@ def run_file(filepath):
     if not os.path.exists(filepath):
         print(f"\033[1;31m[!] Error: File '{filepath}' not found.\033[0m")
         sys.exit(1)
+    try:
+        from stdlib_modules import check_and_prompt_ai_engine
+        check_and_prompt_ai_engine()
+    except Exception:
+        pass
     with open(filepath, "r", encoding="utf-8") as f:
         code = f.read()
     run_code(code)
 
 def start_repl():
     print(ASCII_BANNER)
+    try:
+        from stdlib_modules import check_and_prompt_ai_engine
+        check_and_prompt_ai_engine()
+    except Exception:
+        pass
     evaluator = Evaluator()
     buffer = []
     
@@ -223,6 +233,8 @@ Creator: {AUTHOR}
   airalang run <script.aira>           Execute an AiraLang script
   airalang build <file.aira> [-o out]  Compile script to standalone executable
   airalang new <project_name>          Create a new AiraLang project scaffold
+  airalang --ai-setup                  Configure Aira AI Engine API key (interactive)
+  airalang --set-key <key> [provider]  Set API key for provider (OpenRouter/Groq/OpenAI/Gemini)
   airalang -v, --version               Display version information
   airalang -h, --help                  Show this help message
 """)
@@ -234,6 +246,21 @@ def main():
             print(f"AiraLang v{VERSION} | Creator: {AUTHOR}")
         elif arg1 in ("-h", "--help"):
             print_help()
+        elif arg1 in ("--ai-setup", "--setup-ai"):
+            from stdlib_modules import prompt_developer_for_ai_key
+            prompt_developer_for_ai_key()
+            sys.exit(0)
+        elif arg1 == "--set-key":
+            if len(sys.argv) > 2:
+                from stdlib_modules import create_ai_module
+                ai_mod = create_ai_module()
+                prov = sys.argv[3] if len(sys.argv) > 3 else None
+                ai_mod.methods["set_key"](sys.argv[2], provider=prov)
+                print(f"\033[1;32m✓ API Key successfully configured and saved to config!\033[0m")
+                sys.exit(0)
+            else:
+                print("\033[1;31m[!] Error: Specify API key: airalang --set-key <key> [provider]\033[0m")
+                sys.exit(1)
         elif arg1 == "run":
             if len(sys.argv) > 2:
                 run_file(sys.argv[2])
