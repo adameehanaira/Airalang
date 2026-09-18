@@ -2,7 +2,7 @@
   "name": "airalang",
   "displayName": "AiraLang Language Support",
   "description": "Rich language support, syntax highlighting, and code snippets for AiraLang.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "publisher": "AiraGroupOfTechnology",
   "icon": "icon.png",
   "author": {
@@ -36,7 +36,11 @@
         "id": "airalang",
         "aliases": ["AiraLang", "aira"],
         "extensions": [".aira"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icon.png",
+          "dark": "./icon.png"
+        }
       }
     ],
     "grammars": [
