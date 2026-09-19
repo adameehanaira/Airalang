@@ -1,11 +1,7 @@
-# ===================================================
-# 🌟 AiraLang Script
-# 👑 Creator: Adam Eehan (Aira Group of Technology)
-# ===================================================
+import "crypto";
 
-say "🚀 Welcome to AiraLang!";
-
-let boss = "Adam Eehan";
-say "👑 Running script for Boss: " + boss;
-
-# Write your code below:
+let hash = crypto.sha256("admin123");
+let b64 = crypto.b64encode("adameehan");
+say "SHA-256: " + hash;
+say "Base64: " + b64;
+say "Decoded: " + crypto.b64decode(b64);

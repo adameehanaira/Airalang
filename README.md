@@ -11,10 +11,12 @@
 
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=AiraGroupOfTechnology.airalang"><img src="https://img.shields.io/badge/VS_Code_Marketplace-AiraLang-007ACC?logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
-  <img src="https://img.shields.io/badge/Version-v1.4.4-brightgreen" alt="Version">
-  <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20Termux-blue" alt="OS">
+  <a href="./releases/AiraLang-Studio.apk"><img src="https://img.shields.io/badge/Android_APK-AiraLang_Studio-3DDC84?logo=android&logoColor=white" alt="Android APK"></a>
+  <img src="https://img.shields.io/badge/Version-v1.4.5-brightgreen" alt="Version">
+  <img src="https://img.shields.io/badge/OS-Windows%20%7C%20Linux%20%7C%20Termux%20%7C%20Android-blue" alt="OS">
   <img src="https://img.shields.io/badge/License-MIT-purple.svg" alt="License">
 </p>
+
 
 ---
 
@@ -69,6 +71,23 @@ Enjoy full syntax highlighting, auto-closing brackets, and smart snippets for `.
   Open Extensions (`Ctrl + Shift + X`) ➔ Click the **`...` (Views and More Actions)** icon at top right ➔ Select **"Install from VSIX..."** ➔ Choose `airalang-1.0.0.vsix`!
 
 ---
+
+## 📱 Official Android IDE: AiraLang Mobile Studio
+
+Write, edit, auto-heal, and execute `.aira` scripts directly on your Android smartphone or tablet without needing Termux or a PC!
+
+* ⬇️ **Direct APK Download:** [`releases/AiraLang-Studio.apk`](./releases/AiraLang-Studio.apk) (40.6 MB)
+* 📖 **Release Documentation:** [`releases/README.md`](./releases/README.md)
+* ⚡ **Key Features:**
+  * **100% Embedded CPython Runtime (Chaquopy):** Runs the authentic GitHub AiraLang AST engine on-device.
+  * **All 14 Modules Live:** `proposal`, `crypto`, `ai`, `sqlite`, `net`, `http`, `sec`, `time`, `math`, `json`, etc.
+  * **VS Code Dark+ Mobile Theme:** Designed for comfortable on-the-go coding with dedicated AiraLang quick-keys (`let`, `say`, `fn`, `import`, `≠`, `;`).
+  * **Signature Semicolon Auto-Fixer:** Automatically detects and heals syntax omissions in real-time.
+  * **Sliding Terminal Console:** Pydroid-style interactive ANSI terminal sheet.
+  * **Target OS:** Android 8.0 through Android 15+ (`arm64-v8a`, `armeabi-v7a`, `x86_64`).
+
+---
+
 
 ## 💻 Syntax & Features Guide
 
